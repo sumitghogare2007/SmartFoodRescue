@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Professional civic/NGO platform base styles */
+body {
+  background-color: #ffffff;
+  color: #1a202c;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Focus ring for accessibility */
+*:focus-visible {
+  outline: 2px solid #166534;
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+a, button {
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s;
+}
