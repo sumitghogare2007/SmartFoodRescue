@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 
 import AppLayout from './components/layout/AppLayout';
@@ -19,6 +20,7 @@ import DonationsPage from './pages/donations/DonationsPage';
 import NewDonation from './pages/donations/NewDonation';
 import DonationDetail from './pages/donations/DonationDetail';
 import PickupsPage from './pages/pickups/PickupsPage';
+import Settings from './pages/Settings';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { authUser, loading } = useAuth();
@@ -43,47 +45,51 @@ const DashboardRouter = () => {
 
 const App = () => {
   return (
-    <Router>
-      <NotificationProvider>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            
-            <Route path="/auth">
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-              <Route path="forgot-password" element={<ForgotPassword />} />
-            </Route>
-
-            <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="dashboard" element={<DashboardRouter />} />
+    <ThemeProvider>
+      <Router>
+        <NotificationProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Landing />} />
               
-              <Route path="donations">
-                <Route index element={<DonationsPage />} />
-                <Route path="new" element={<NewDonation />} />
-                <Route path=":id" element={<DonationDetail />} />
+              <Route path="/auth">
+                <Route path="login" element={<Login />} />
+                <Route path="register" element={<Register />} />
+                <Route path="forgot-password" element={<ForgotPassword />} />
               </Route>
 
-              <Route path="pickups">
-                <Route index element={<PickupsPage />} />
+              <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="dashboard" element={<DashboardRouter />} />
+                
+                <Route path="donations">
+                  <Route index element={<DonationsPage />} />
+                  <Route path="new" element={<NewDonation />} />
+                  <Route path=":id" element={<DonationDetail />} />
+                </Route>
+
+                <Route path="pickups">
+                  <Route index element={<PickupsPage />} />
+                </Route>
+
+                <Route path="settings" element={<Settings />} />
               </Route>
-            </Route>
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster 
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#fff',
-                color: '#1a202c',
-                border: '1px solid #e2e8f0'
-              }
-            }}
-          />
-        </AuthProvider>
-      </NotificationProvider>
-    </Router>
+              
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <Toaster 
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: '#fff',
+                  color: '#1a202c',
+                  border: '1px solid #e2e8f0'
+                }
+              }}
+            />
+          </AuthProvider>
+        </NotificationProvider>
+      </Router>
+    </ThemeProvider>
   );
 };
 

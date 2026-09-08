@@ -60,7 +60,7 @@ SmartFoodRescue dynamically switches between **Local Community Server** and **Cl
 ### 1. Local Development (Default)
 Ideal for offline development, local testing, and university lab evaluation:
 ```env
-MONGODB_URI=mongodb://127.0.0.1:27017/SmartFoodRescue
+MONGODB_URI=mongodb://127.0.0.1:27017/smartfoodrescue
 ```
 - Requires **MongoDB Community Server** installed and running on Windows / Linux / macOS.
 - Inspect collections visually in **MongoDB Compass** by connecting to `mongodb://127.0.0.1:27017`.
@@ -68,7 +68,7 @@ MONGODB_URI=mongodb://127.0.0.1:27017/SmartFoodRescue
 ### 2. Production / Cloud Atlas
 Ideal for cloud deployment (Render, Railway, Fly.io) and team access:
 ```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/SmartFoodRescue?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/smartfoodrescue?retryWrites=true&w=majority
 ```
 - Automatic TLS encryption.
 - Built-in connection pooling and replica set failover.
@@ -151,9 +151,9 @@ Every single transition:
 Create `server/.env` based on `server/.env.example`:
 ```env
 # Database Connection (Local or Atlas)
-MONGODB_URI=mongodb://127.0.0.1:27017/SmartFoodRescue
+MONGODB_URI=mongodb://127.0.0.1:27017/smartfoodrescue
 # Or MongoDB Atlas:
-# MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/SmartFoodRescue?retryWrites=true&w=majority
+# MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/smartfoodrescue?retryWrites=true&w=majority
 
 # Authentication
 JWT_SECRET=sfr_jwt_secret_2024_super_secure_key_change_in_prod

@@ -38,8 +38,8 @@ export const donationService = {
     return response.data as DonationRequest[];
   },
 
-  async acceptRequest(requestId: string) {
-    const response = await apiClient.put(`/api/donation-requests/${requestId}/accept`);
+  async acceptRequest(requestId: string, volunteerId?: string) {
+    const response = await apiClient.put(`/api/donation-requests/${requestId}/accept`, { volunteerId });
     return response.data as DonationRequest;
   },
 

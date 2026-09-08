@@ -17,12 +17,13 @@ import path from 'path';
 // Load .env from server/ directory
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/SmartFoodRescue';
+const rawUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartfoodrescue';
+const MONGODB_URI = rawUri.replace(/\/SmartFoodRescue(?=[\/?]|$)/i, '/smartfoodrescue');
 
 async function seed() {
   try {
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { dbName: 'smartfoodrescue' });
     console.log('Connected to MongoDB successfully.');
 
     const hashPassword = async (pass: string) => bcrypt.hash(pass, await bcrypt.genSalt(10));

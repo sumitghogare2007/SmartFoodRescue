@@ -5,6 +5,7 @@ import { apiClient } from '../../lib/api';
 import type { FoodDonation, DonationRequest, Pickup } from '../../types';
 import { Package, Clock, CheckCircle, Plus, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import VolunteerSelectModal from '../../components/volunteer/VolunteerSelectModal';
 
 const DonorDashboard = () => {
   const [donations, setDonations] = useState<FoodDonation[]>([]);
@@ -12,7 +13,7 @@ const DonorDashboard = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'donations' | 'requests' | 'pickups'>('donations');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [assigningRequestId, setAssigningRequestId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,19 +42,6 @@ const DonorDashboard = () => {
       toast.error('Failed to load donor dashboard data');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAcceptRequest = async (requestId: string) => {
-    setActionLoading(requestId);
-    try {
-      await donationService.acceptRequest(requestId);
-      toast.success('Request accepted! Volunteer has been assigned.');
-      await fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to accept request');
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -284,11 +272,10 @@ const DonorDashboard = () => {
                       </span>
                       {req.requestStatus === 'PENDING' && (
                         <button
-                          onClick={() => handleAcceptRequest(req._id)}
-                          disabled={actionLoading === req._id}
-                          className="px-4 py-1.5 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 disabled:opacity-50"
+                          onClick={() => setAssigningRequestId(req._id)}
+                          className="px-4 py-1.5 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 transition-colors shadow-xs"
                         >
-                          {actionLoading === req._id ? 'Accepting...' : 'Accept Request'}
+                          Accept & Assign Volunteer
                         </button>
                       )}
                     </div>
@@ -354,6 +341,24 @@ const DonorDashboard = () => {
           )}
         </div>
       )}
+
+      {/* Volunteer Selection Modal */}
+      <VolunteerSelectModal
+        isOpen={Boolean(assigningRequestId)}
+        onClose={() => setAssigningRequestId(null)}
+        title="Assign Registered Volunteer"
+        subtitle="Select an eligible registered volunteer from MongoDB to assign to this food pickup."
+        onAssign={async (volunteerId) => {
+          if (!assigningRequestId) return;
+          try {
+            await donationService.acceptRequest(assigningRequestId, volunteerId);
+            toast.success('Food request accepted and volunteer assigned successfully!');
+            await fetchDashboardData();
+          } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to accept request with volunteer');
+          }
+        }}
+      />
     </div>
   );
 };

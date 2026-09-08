@@ -18,7 +18,8 @@ import Distribution from '../src/models/Distribution';
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/SmartFoodRescue';
+const rawUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartfoodrescue';
+const MONGODB_URI = rawUri.replace(/\/SmartFoodRescue(?=[\/?]|$)/i, '/smartfoodrescue');
 
 async function runVerification() {
   console.log('====================================================');
@@ -26,13 +27,13 @@ async function runVerification() {
   console.log('====================================================');
   console.log(`Connecting to: ${MONGODB_URI}`);
 
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI, { dbName: 'smartfoodrescue' });
   console.log('MongoDB connected successfully\n');
 
   // 1. Verify Database Name
   const dbName = mongoose.connection.db?.databaseName;
-  console.log(`[1] Database Name: ${dbName} (Expected: SmartFoodRescue)`);
-  if (dbName !== 'SmartFoodRescue') {
+  console.log(`[1] Database Name: ${dbName} (Expected: smartfoodrescue)`);
+  if (dbName !== 'smartfoodrescue') {
     throw new Error(`Unexpected database name: ${dbName}`);
   }
 
@@ -245,7 +246,7 @@ async function runVerification() {
 
   // 10. Summary Document Counts in MongoDB
   console.log('\n====================================================');
-  console.log('FINAL DATABASE SUMMARY (SmartFoodRescue):');
+  console.log('FINAL DATABASE SUMMARY (smartfoodrescue):');
   console.log('====================================================');
   for (const col of requiredCollections) {
     const count = await mongoose.connection.db?.collection(col).countDocuments();

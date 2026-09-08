@@ -6,6 +6,7 @@ import FoodDonation from '../models/FoodDonation';
 
 import PickupTracking from '../models/PickupTracking';
 import NGO from '../models/NGO';
+import { sendDistributedEmail } from '../services/emailService';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -74,6 +75,16 @@ export const complete = async (req: Request, res: Response, next: NextFunction) 
     const distribution = await Distribution.findById(req.params.id);
     if (!distribution) return res.status(404).json({ message: 'Distribution not found' });
 
+    const pickup = await Pickup.findById(distribution.pickupId);
+    if (!pickup) return res.status(404).json({ message: 'Associated pickup not found' });
+
+    // Strict state flow: food must be DELIVERED before it can be DISTRIBUTED
+    if (pickup.pickupStatus !== 'DELIVERED') {
+      return res.status(400).json({
+        message: `Invalid status transition: Food must be in DELIVERED state before distribution can be recorded. Current pickup status is ${pickup.pickupStatus}.`
+      });
+    }
+
     distribution.distributionStatus = 'COMPLETED';
     if (req.body.quantityDistributed) distribution.quantityDistributed = req.body.quantityDistributed;
     if (req.body.beneficiaryCount) distribution.beneficiaryCount = req.body.beneficiaryCount;
@@ -83,40 +94,78 @@ export const complete = async (req: Request, res: Response, next: NextFunction) 
 
     await distribution.save();
 
-    const pickup = await Pickup.findById(distribution.pickupId);
-    if (pickup) {
-      pickup.pickupStatus = 'DISTRIBUTED';
-      const historyEntry = {
-        status: 'DISTRIBUTED',
-        changedBy: req.user._id,
-        changedAt: new Date(),
-        note: req.body.notes || 'Food distributed to beneficiaries by NGO'
-      };
-      pickup.statusHistory.push(historyEntry);
-      await pickup.save();
+    pickup.pickupStatus = 'DISTRIBUTED';
+    const historyEntry = {
+      status: 'DISTRIBUTED',
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: req.body.notes || 'Food distributed to beneficiaries by NGO'
+    };
+    pickup.statusHistory.push(historyEntry);
+    await pickup.save();
 
-      // Log to pickupTracking collection
-      const tracking = new PickupTracking({
-        pickupId: pickup._id,
-        status: 'DISTRIBUTED',
-        changedBy: req.user._id,
-        changedAt: new Date(),
-        note: req.body.notes || 'Food distributed to beneficiaries by NGO'
-      });
-      await tracking.save();
+    // Log to pickupTracking collection
+    const tracking = new PickupTracking({
+      pickupId: pickup._id,
+      status: 'DISTRIBUTED',
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: req.body.notes || 'Food distributed to beneficiaries by NGO'
+    });
+    await tracking.save();
 
-      const request = await DonationRequest.findById(pickup.requestId);
-      if (request) {
-        request.requestStatus = 'COMPLETED';
-        await request.save();
+    const request = await DonationRequest.findById(pickup.requestId);
+    if (request) {
+      request.requestStatus = 'COMPLETED';
+      await request.save();
 
-        const donation = await FoodDonation.findById(request.donationId);
-        if (donation) {
-          donation.status = 'DISTRIBUTED';
-          await donation.save();
-        }
+      const donation = await FoodDonation.findById(request.donationId);
+      if (donation) {
+        donation.status = 'DISTRIBUTED';
+        await donation.save();
       }
     }
+
+    // Trigger email notification for food distributed (asynchronous, non-blocking)
+    (async () => {
+      try {
+        const fullPickup = await Pickup.findById(pickup._id)
+          .populate({
+            path: 'requestId',
+            populate: [
+              { path: 'donationId', populate: [{ path: 'donorId', populate: 'userId' }] },
+              { path: 'ngoId', populate: 'userId' }
+            ]
+          });
+
+        const reqObj = fullPickup?.requestId as any;
+        const don = reqObj?.donationId as any;
+        const donor = don?.donorId as any;
+        const ngo = reqObj?.ngoId as any;
+
+        const donorEmail = donor?.contactEmail || donor?.userId?.email;
+        const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
+
+        const recipients = Array.from(new Set([donorEmail, ngoEmail].filter(Boolean) as string[]));
+
+        if (recipients.length > 0 && don) {
+          await sendDistributedEmail({
+            to: recipients,
+            distributionId: distribution._id.toString(),
+            foodType: don.foodType || 'Surplus Food',
+            quantityDistributed: distribution.quantityDistributed || don.quantity || 'All',
+            unit: don.unit || 'portions',
+            ngoName: ngo?.ngoName || ngo?.userId?.name || 'Partner NGO',
+            beneficiaryCount: distribution.beneficiaryCount,
+            distributionDate: distribution.distributionDate || new Date(),
+            notes: distribution.notes || undefined
+          });
+        }
+      } catch (err: any) {
+        console.error('[EmailService] Error preparing distributed email:', err.message);
+      }
+    })();
+
     res.json(distribution);
   } catch (error) {
     next(error);

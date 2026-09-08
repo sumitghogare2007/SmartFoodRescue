@@ -16,11 +16,13 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import VolunteerSelectModal from '../../components/volunteer/VolunteerSelectModal';
 
 const PickupsPage = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [assigningPickupId, setAssigningPickupId] = useState<string | null>(null);
   const { authUser } = useAuth();
 
   useEffect(() => {
@@ -162,6 +164,16 @@ const PickupsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {(authUser?.userType === 'ADMIN' || authUser?.userType === 'NGO' || authUser?.userType === 'DONOR') && 
+                       !['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
+                        <button
+                          onClick={() => setAssigningPickupId(pickup._id)}
+                          className="px-2.5 py-1 text-xs font-semibold rounded bg-green-50 dark:bg-green-950/40 text-[#166534] dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors flex items-center gap-1 shadow-xs"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          {pickup.volunteerId ? 'Change Volunteer' : 'Assign Volunteer'}
+                        </button>
+                      )}
                       <span className={`px-3 py-1 text-xs font-bold rounded-full border ${getStatusBadgeColor(pickup.pickupStatus)}`}>
                         {pickup.pickupStatus}
                       </span>
@@ -375,6 +387,24 @@ const PickupsPage = () => {
           )}
         </div>
       )}
+
+      {/* Volunteer Selection Modal */}
+      <VolunteerSelectModal
+        isOpen={Boolean(assigningPickupId)}
+        onClose={() => setAssigningPickupId(null)}
+        title="Assign Registered Volunteer"
+        subtitle="Select an eligible registered volunteer from MongoDB to handle this food rescue pickup."
+        onAssign={async (volunteerId) => {
+          if (!assigningPickupId) return;
+          try {
+            await apiClient.put(`/api/pickups/${assigningPickupId}/assign-volunteer`, { volunteerId });
+            toast.success('Volunteer assigned successfully!');
+            await fetchPickups();
+          } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to assign volunteer');
+          }
+        }}
+      />
     </div>
   );
 };

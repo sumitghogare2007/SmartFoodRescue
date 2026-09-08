@@ -4,7 +4,14 @@ import Pickup from '../models/Pickup';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const volunteers = await Volunteer.find().populate('userId', '-passwordHash');
+    const { available } = req.query;
+    const filter: any = {};
+    if (available === 'true') {
+      filter.availability = 'Available';
+    }
+    const volunteers = await Volunteer.find(filter)
+      .populate('userId', '-passwordHash')
+      .sort({ createdAt: -1 });
     res.json(volunteers);
   } catch (error) {
     next(error);
