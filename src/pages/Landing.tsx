@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Heart, ArrowRight } from 'lucide-react';
+import Logo from '../components/ui/Logo';
 
 const Landing = () => {
   return (
@@ -7,10 +8,9 @@ const Landing = () => {
       <nav className="border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
-            <div className="flex items-center gap-2 text-[#1e3a5f]">
-              <Heart className="w-8 h-8 text-[#166534]" fill="currentColor" />
-              <span className="font-bold text-2xl tracking-tight">SmartFoodRescue</span>
-            </div>
+            <Link to="/" className="flex items-center">
+              <Logo size={36} showText={true} textSize="text-2xl font-bold" />
+            </Link>
             <div className="hidden md:flex gap-8 items-center font-medium text-gray-600">
               <a href="#how-it-works" className="hover:text-[#1e3a5f] transition-colors">How It Works</a>
               <a href="#donors" className="hover:text-[#1e3a5f] transition-colors">For Donors</a>

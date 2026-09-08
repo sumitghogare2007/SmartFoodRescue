@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import FoodDonation from '../models/FoodDonation';
 import Donor from '../models/Donor';
+import { sendDonationCreatedEmail } from '../services/emailService';
+import { eventService } from '../services/eventService';
 
 // Mask aadhaar: XXXX-XXXX-1234 (show only last 4 digits)
 const maskAadhaar = (aadhaar?: string): string | undefined => {
@@ -150,6 +152,39 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
       .populate('donorId')
       .populate('locationId');
 
+    // Asynchronously send confirmation email to donor's registered MongoDB email
+    (async () => {
+      try {
+        const donorEmail = req.user?.email || (donor as any).contactEmail;
+        if (donorEmail) {
+          const loc = populated?.locationId as any;
+          const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
+          await sendDonationCreatedEmail({
+            to: donorEmail,
+            donorName: donor.organizationName || donor.contactName || req.user.name || 'Food Donor',
+            donationId: donation._id.toString(),
+            foodType: donation.foodType,
+            foodCategory: donation.foodCategory,
+            quantity: donation.quantity,
+            unit: donation.unit,
+            pickupLocation: locStr,
+            preparationTime: donation.preparationTime,
+            expiryTime: donation.expiryTime,
+            status: donation.status
+          });
+        }
+      } catch (err: any) {
+        console.error('[EmailService] Error preparing donation created email:', err?.message || err);
+      }
+    })();
+
+    // Broadcast real-time update
+    eventService.broadcast('donation:created', {
+      donationId: donation._id,
+      foodType: donation.foodType,
+      status: donation.status
+    });
+
     res.status(201).json(maskDonation(populated));
   } catch (error) {
     next(error);
@@ -168,6 +203,7 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const updated = await FoodDonation.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    eventService.broadcast('donation:updated', { donationId: req.params.id });
     res.json(updated);
   } catch (error) {
     next(error);
@@ -186,6 +222,7 @@ export const cancel = async (req: Request, res: Response, next: NextFunction) =>
 
     donation.status = 'CANCELLED';
     await donation.save();
+    eventService.broadcast('donation:updated', { donationId: donation._id, status: 'CANCELLED' });
     res.json(donation);
   } catch (error) {
     next(error);
@@ -210,6 +247,7 @@ export const markExpired = async (req: Request, res: Response, next: NextFunctio
       { expiryTime: { $lt: new Date() }, status: { $in: ['AVAILABLE', 'REQUESTED', 'ACCEPTED'] } },
       { $set: { status: 'EXPIRED' } }
     );
+    eventService.broadcast('donation:updated', { action: 'markExpired', count: result.modifiedCount });
     res.json({ message: `${result.modifiedCount} donations marked as expired` });
   } catch (error) {
     next(error);

@@ -88,6 +88,14 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// Real-Time Server-Sent Events (SSE) Stream
+import { eventService } from './services/eventService';
+import { verifyEmailConfig } from './services/emailService';
+
+app.get('/api/events', (req, res) => {
+  eventService.handleConnection(req, res);
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
@@ -106,7 +114,10 @@ app.use('/api/stats', statsRoutes);
 app.use(errorHandler);
 
 // Connect to Database and start server
-connectDB().then(() => {
+connectDB().then(async () => {
+  // Verify email configuration at startup without exposing password
+  await verifyEmailConfig();
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT} (bound to 0.0.0.0)`);
   });

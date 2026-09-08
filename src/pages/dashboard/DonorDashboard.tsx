@@ -7,6 +7,8 @@ import { Package, Clock, CheckCircle, Plus, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import VolunteerSelectModal from '../../components/volunteer/VolunteerSelectModal';
 
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+
 const DonorDashboard = () => {
   const [donations, setDonations] = useState<FoodDonation[]>([]);
   const [requests, setRequests] = useState<DonationRequest[]>([]);
@@ -19,6 +21,11 @@ const DonorDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useRealtimeSync({
+    onSync: () => fetchDashboardData(),
+    events: ['donation:created', 'donation:updated', 'request:created', 'request:accepted', 'request:updated', 'pickup:updated', 'distribution:completed'],
+  });
 
   const fetchDashboardData = async () => {
     try {

@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Heart, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import Logo from '../../components/ui/Logo';
 
 const ForgotPassword = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Heart className="mx-auto h-12 w-12 text-[#166534]" />
-        <h2 className="mt-6 text-3xl font-extrabold text-[#1e3a5f]">
+        <div className="flex justify-center mb-3">
+          <Logo size={44} showText={true} textSize="text-2xl font-bold" />
+        </div>
+        <h2 className="mt-4 text-2xl font-extrabold text-[#1e3a5f]">
           Password Reset
         </h2>
       </div>

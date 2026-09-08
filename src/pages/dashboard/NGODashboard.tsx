@@ -6,6 +6,8 @@ import type { FoodDonation, Pickup, DonationRequest, Distribution } from '../../
 import { Package, Truck, Utensils, Heart, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+
 const NGODashboard = () => {
   const [availableDonations, setAvailableDonations] = useState<FoodDonation[]>([]);
   const [myRequests, setMyRequests] = useState<DonationRequest[]>([]);
@@ -32,6 +34,11 @@ const NGODashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useRealtimeSync({
+    onSync: () => fetchDashboardData(),
+    events: ['donation:created', 'donation:updated', 'request:created', 'request:accepted', 'request:updated', 'pickup:updated', 'distribution:completed'],
+  });
 
   const fetchDashboardData = async () => {
     try {

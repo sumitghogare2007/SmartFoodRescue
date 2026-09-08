@@ -5,6 +5,8 @@ import type { Pickup, StatusHistoryEntry } from '../../types';
 import { Truck, MapPin, Package, Check, Loader, Building2, Phone, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+
 const VolunteerDashboard = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [historyMap, setHistoryMap] = useState<Record<string, StatusHistoryEntry[]>>({});
@@ -14,6 +16,11 @@ const VolunteerDashboard = () => {
   useEffect(() => {
     fetchPickups();
   }, []);
+
+  useRealtimeSync({
+    onSync: () => fetchPickups(),
+    events: ['pickup:updated', 'distribution:completed', 'request:accepted'],
+  });
 
   const fetchPickups = async () => {
     try {

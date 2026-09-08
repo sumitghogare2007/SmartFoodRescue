@@ -1,11 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
-  <circle cx="24" cy="24" r="23" fill="#166534" fill-opacity="0.12" stroke="#166534" stroke-width="1.5" />
+  <!-- Subtle circular container backdrop -->
+  <circle cx="24" cy="24" r="23" fill="#166534" fill-opacity="0.1" stroke="#166534" stroke-width="1.5" />
+  
+  <!-- Food bowl foundation -->
   <path d="M12 26C12 32.6274 17.3726 38 24 38C30.6274 38 36 32.6274 36 26H12Z" fill="#166534" />
   <rect x="19" y="38" width="10" height="2.5" rx="1.25" fill="#166534" />
+
+  <!-- Nourishing warmth / steam / community warmth -->
   <path d="M18 22C18 20 19 18 19 16" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
   <path d="M24 22C24 19 25 17 25 14" stroke="#166534" stroke-width="2.5" stroke-linecap="round" />
   <path d="M30 22C30 20 29 18 29 16" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Sprout / Leaf of Life rising from center -->
   <path d="M24 18C24 13.5 28 11 31 11C31 14.5 28.5 18 24 18Z" fill="#22c55e" />
   <path d="M24 18C24 14.5 20.5 12.5 18 12.5C18 15.5 20.5 18 24 18Z" fill="#15803d" />
+
+  <!-- Heart emblem at center of bowl -->
   <path d="M24 29.5L22.8 28.3C20 25.7 18 23.9 18 21.7C18 19.9 19.4 18.5 21.2 18.5C22.2 18.5 23.2 19 24 19.8C24.8 19 25.8 18.5 26.8 18.5C28.6 18.5 30 19.9 30 21.7C30 23.9 28 25.7 25.2 28.3L24 29.5Z" fill="#ffffff" />
 </svg>

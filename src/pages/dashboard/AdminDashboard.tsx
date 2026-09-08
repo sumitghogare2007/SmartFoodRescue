@@ -19,6 +19,8 @@ import {
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [pickups, setPickups] = useState<Pickup[]>([]);
@@ -28,6 +30,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useRealtimeSync({
+    onSync: () => fetchDashboardData(),
+    events: ['donation:created', 'donation:updated', 'request:created', 'request:accepted', 'pickup:updated', 'distribution:completed', 'user:updated'],
+  });
 
   const fetchDashboardData = async () => {
     try {

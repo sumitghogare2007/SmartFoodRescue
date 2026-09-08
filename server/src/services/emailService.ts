@@ -1,11 +1,21 @@
 import nodemailer from 'nodemailer';
 
+export const maskEmail = (email: string): string => {
+  if (!email || !email.includes('@')) return email || 'unknown';
+  const [localPart, domain] = email.split('@');
+  if (localPart.length <= 2) {
+    return `${localPart[0]}*@${domain}`;
+  }
+  const start = localPart.slice(0, 2);
+  const end = localPart.slice(-1);
+  return `${start}***${end}@${domain}`;
+};
+
 const getTransporter = () => {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '') : '';
 
   if (!user || !pass) {
-    console.warn('[EmailService] EMAIL_USER or EMAIL_PASSWORD not configured. Emails will be logged but not sent.');
     return null;
   }
 
@@ -18,12 +28,33 @@ const getTransporter = () => {
   });
 };
 
-const getFromAddress = () => {
-  return process.env.EMAIL_FROM || `SmartFoodRescue <${process.env.EMAIL_USER || 'no-reply@smartfoodrescue.org'}>`;
+export const getFromAddress = () => {
+  return process.env.EMAIL_FROM || `SmartFoodRescue <${process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com'}>`;
+};
+
+export const verifyEmailConfig = async (): Promise<boolean> => {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '') : '';
+
+  if (!user || !pass) {
+    console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing). Emails will be skipped safely.');
+    return false;
+  }
+
+  try {
+    const transporter = getTransporter();
+    if (!transporter) return false;
+    await transporter.verify();
+    console.log(`[EmailService] SMTP configuration verified successfully (User: ${maskEmail(user)})`);
+    return true;
+  } catch (error: any) {
+    console.error(`[EmailService] SMTP configuration verification failed: ${error?.message || error}`);
+    return false;
+  }
 };
 
 // Base HTML layout for consistent, professional styling
-const wrapEmailTemplate = (title: string, bodyContent: string) => `
+export const wrapEmailTemplate = (title: string, bodyContent: string) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -63,6 +94,221 @@ const wrapEmailTemplate = (title: string, bodyContent: string) => `
 </html>
 `;
 
+export const sendEmailSafe = async (options: {
+  to: string | string[];
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<boolean> => {
+  try {
+    const transporter = getTransporter();
+    const recipients = Array.isArray(options.to) ? options.to : [options.to];
+    const validRecipients = Array.from(new Set(recipients.map(r => (r || '').trim()).filter(Boolean)));
+    if (validRecipients.length === 0) {
+      console.warn('[EmailService] No valid recipient email provided.');
+      return false;
+    }
+
+    const maskedRecipients = validRecipients.map(maskEmail).join(', ');
+
+    if (!transporter) {
+      console.log(`[EmailService] [Notice] Transporter not configured. Email preview: "${options.subject}" to: ${maskedRecipients}`);
+      return false;
+    }
+
+    await transporter.sendMail({
+      from: getFromAddress(),
+      to: validRecipients.join(', '),
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+    });
+
+    console.log(`Email sent successfully to: ${maskedRecipients}`);
+    return true;
+  } catch (error: any) {
+    console.error(`Email sending failed: ${error?.message || error}`);
+    return false;
+  }
+};
+
+// ==========================================
+// 1. DONOR EMAIL FLOW: Food Donation Created
+// ==========================================
+export interface DonationCreatedEmailData {
+  to: string | string[];
+  donorName: string;
+  donationId: string;
+  foodType: string;
+  foodCategory?: string;
+  quantity: number | string;
+  unit?: string;
+  pickupLocation: string;
+  preparationTime?: Date | string;
+  expiryTime: Date | string;
+  status?: string;
+}
+
+export const sendDonationCreatedEmail = async (data: DonationCreatedEmailData): Promise<boolean> => {
+  const unit = data.unit || 'kg';
+  const prepStr = data.preparationTime ? new Date(data.preparationTime).toLocaleString() : 'Just Prepared';
+  const expStr = data.expiryTime ? new Date(data.expiryTime).toLocaleString() : 'N/A';
+  const status = data.status || 'AVAILABLE';
+
+  const bodyContent = `
+    <p>Dear ${data.donorName},</p>
+    <p>Thank you for submitting a surplus food donation! Your listing has been registered on <strong>SmartFoodRescue</strong> and is now visible to verified partner NGOs.</p>
+    <div class="card">
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Item / Type:</span><span class="value">${data.foodType}</span></div>
+      ${data.foodCategory ? `<div class="row"><span class="label">Category:</span><span class="value">${data.foodCategory}</span></div>` : ''}
+      <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>
+      <div class="row"><span class="label">Prepared Time:</span><span class="value">${prepStr}</span></div>
+      <div class="row"><span class="label">Expiry Time:</span><span class="value">${expStr}</span></div>
+      <div class="row"><span class="label">Current Status:</span><span class="value"><span class="badge">${status}</span></span></div>
+    </div>
+    <p>We will notify you immediately via email as soon as a partner NGO requests this donation.</p>
+  `;
+
+  const html = wrapEmailTemplate('Food Donation Received', bodyContent);
+  const text = `Dear ${data.donorName},\n\nYour food donation (#${data.donationId.slice(-6)}) for "${data.foodType}" (${data.quantity} ${unit}) has been received by SmartFoodRescue. Current status: ${status}. We will notify you once accepted by an NGO.`;
+
+  return sendEmailSafe({
+    to: data.to,
+    subject: 'Food Donation Received - SmartFoodRescue',
+    text,
+    html,
+  });
+};
+
+// ==========================================
+// 2. NGO ACCEPTANCE EMAIL FLOW
+// ==========================================
+export interface NgoAcceptanceEmailData {
+  to: string | string[];
+  donorName: string;
+  donationId: string;
+  foodType: string;
+  quantity: number | string;
+  unit?: string;
+  ngoName: string;
+  pickupLocation?: string;
+  volunteerName?: string;
+  volunteerPhone?: string;
+  status?: string;
+}
+
+export const sendNgoAcceptanceEmail = async (data: NgoAcceptanceEmailData): Promise<boolean> => {
+  const unit = data.unit || 'portions';
+  const status = data.status || 'ACCEPTED';
+
+  const bodyContent = `
+    <p>Dear ${data.donorName},</p>
+    <p style="font-size: 15px; font-weight: 600; color: #166534;">
+      Your food donation has been accepted by ${data.ngoName}. The donation is now being processed for pickup.
+    </p>
+    <div class="card">
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Details:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">Accepted By (NGO):</span><span class="value">${data.ngoName}</span></div>
+      ${data.pickupLocation ? `<div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>` : ''}
+      <div class="row"><span class="label">Assigned Volunteer:</span><span class="value">${data.volunteerName ? `${data.volunteerName} ${data.volunteerPhone ? `(${data.volunteerPhone})` : ''}` : 'Assigning in progress...'}</span></div>
+      <div class="row"><span class="label">Current Status:</span><span class="value"><span class="badge">${status}</span></span></div>
+    </div>
+    <p>Please keep the surplus food packaged and ready for safe handover. You can monitor the live rescue timeline on your dashboard.</p>
+  `;
+
+  const html = wrapEmailTemplate('Your Food Donation Has Been Accepted', bodyContent);
+  const text = `Dear ${data.donorName},\n\nYour food donation has been accepted by ${data.ngoName}. The donation is now being processed for pickup. Donation ID: #${data.donationId.slice(-6)}. Food: ${data.foodType} (${data.quantity} ${unit}). Status: ${status}.`;
+
+  return sendEmailSafe({
+    to: data.to,
+    subject: 'Your Food Donation Has Been Accepted - SmartFoodRescue',
+    text,
+    html,
+  });
+};
+
+// ==========================================
+// 3. VOLUNTEER STATUS EMAILS
+// ==========================================
+export interface VolunteerStatusEmailData {
+  to: string | string[];
+  donorName: string;
+  donationId: string;
+  foodType: string;
+  quantity: number | string;
+  unit?: string;
+  ngoName: string;
+  volunteerName?: string;
+  volunteerPhone?: string;
+  status: 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'DELIVERED' | 'DISTRIBUTED' | string;
+  pickupLocation?: string;
+  deliveryLocation?: string;
+  notes?: string;
+}
+
+export const sendVolunteerStatusEmail = async (data: VolunteerStatusEmailData): Promise<boolean> => {
+  const unit = data.unit || 'portions';
+  let subject = `Food Donation Status Updated: ${data.status} - SmartFoodRescue`;
+  let title = `Donation Status: ${data.status}`;
+  let statusDescription = `Your food donation status has changed to ${data.status}.`;
+
+  if (data.status === 'ASSIGNED') {
+    subject = 'Volunteer Assigned for Food Pickup - SmartFoodRescue';
+    title = 'Volunteer Assigned for Pickup';
+    statusDescription = `A volunteer (${data.volunteerName || 'Fleet Volunteer'}) has been assigned to pick up your food donation for ${data.ngoName}.`;
+  } else if (data.status === 'RECEIVED') {
+    subject = 'Food Donation Picked Up by Volunteer - SmartFoodRescue';
+    title = 'Food Picked Up by Volunteer';
+    statusDescription = `The volunteer has arrived and securely picked up the food donation from your pickup location.`;
+  } else if (data.status === 'DISPATCHED') {
+    subject = 'Food Donation In Transit - SmartFoodRescue';
+    title = 'Food Donation In Transit';
+    statusDescription = `The food donation is currently in transit to ${data.ngoName}.`;
+  } else if (data.status === 'DELIVERED') {
+    subject = 'Food Donation Delivered Successfully - SmartFoodRescue';
+    title = 'Food Donation Delivered Successfully';
+    statusDescription = `The food donation has been safely transported and delivered to the recipient NGO (${data.ngoName}).`;
+  } else if (data.status === 'DISTRIBUTED') {
+    subject = 'Food Donation Successfully Distributed - SmartFoodRescue';
+    title = 'Food Donation Successfully Distributed';
+    statusDescription = `The food rescue cycle is now complete! The food has been served to community beneficiaries by ${data.ngoName}.`;
+  }
+
+  const bodyContent = `
+    <p>Dear ${data.donorName},</p>
+    <p style="font-size: 14px; font-weight: 500; color: #1e293b;">${statusDescription}</p>
+    <div class="card">
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Item:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">Partner NGO:</span><span class="value">${data.ngoName}</span></div>
+      ${data.volunteerName ? `<div class="row"><span class="label">Volunteer:</span><span class="value">${data.volunteerName} ${data.volunteerPhone ? `(${data.volunteerPhone})` : ''}</span></div>` : ''}
+      <div class="row"><span class="label">Current Status:</span><span class="value"><span class="badge">${data.status}</span></span></div>
+      ${data.pickupLocation ? `<div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>` : ''}
+      ${data.deliveryLocation ? `<div class="row"><span class="label">Delivery Location:</span><span class="value">${data.deliveryLocation}</span></div>` : ''}
+      ${data.notes ? `<div class="row"><span class="label">Notes:</span><span class="value">${data.notes}</span></div>` : ''}
+    </div>
+    <p>Thank you for contributing to hunger relief and food rescue with SmartFoodRescue!</p>
+  `;
+
+  const html = wrapEmailTemplate(title, bodyContent);
+  const text = `Dear ${data.donorName},\n\n${statusDescription}\nDonation ID: #${data.donationId.slice(-6)}\nFood: ${data.foodType} (${data.quantity} ${unit})\nStatus: ${data.status}\nNGO: ${data.ngoName}`;
+
+  return sendEmailSafe({
+    to: data.to,
+    subject,
+    text,
+    html,
+  });
+};
+
+// ==========================================
+// 4. Legacy and Existing Call Compatibility
+// ==========================================
 export interface RequestPlacedEmailData {
   to: string | string[];
   requestId: string;
@@ -77,43 +323,29 @@ export interface RequestPlacedEmailData {
 }
 
 export const sendRequestPlacedEmail = async (data: RequestPlacedEmailData): Promise<boolean> => {
-  try {
-    const transporter = getTransporter();
-    if (!transporter) return false;
+  const unit = data.unit || 'portions';
+  const bodyContent = `
+    <p>A new food rescue request has been placed on the SmartFoodRescue platform.</p>
+    <div class="card">
+      <div class="row"><span class="label">Request / Donation ID:</span><span class="value">#${data.requestId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity Requested:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">Donor:</span><span class="value">${data.donorName}</span></div>
+      <div class="row"><span class="label">Requesting NGO:</span><span class="value">${data.ngoName}</span></div>
+      <div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>
+      <div class="row"><span class="label">Status:</span><span class="value"><span class="badge">${data.status}</span></span></div>
+      ${data.expectedPickupInfo ? `<div class="row"><span class="label">Pickup Note:</span><span class="value">${data.expectedPickupInfo}</span></div>` : ''}
+    </div>
+    <p>Please log in to your dashboard to review and manage this rescue operation.</p>
+  `;
 
-    const unit = data.unit || 'portions';
-    const bodyContent = `
-      <p>A new food rescue request has been placed on the SmartFoodRescue platform.</p>
-      <div class="card">
-        <div class="row"><span class="label">Request / Donation ID:</span><span class="value">#${data.requestId.slice(-6).toUpperCase()}</span></div>
-        <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
-        <div class="row"><span class="label">Quantity Requested:</span><span class="value">${data.quantity} ${unit}</span></div>
-        <div class="row"><span class="label">Donor:</span><span class="value">${data.donorName}</span></div>
-        <div class="row"><span class="label">Requesting NGO:</span><span class="value">${data.ngoName}</span></div>
-        <div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>
-        <div class="row"><span class="label">Status:</span><span class="value"><span class="badge">${data.status}</span></span></div>
-        ${data.expectedPickupInfo ? `<div class="row"><span class="label">Pickup Note:</span><span class="value">${data.expectedPickupInfo}</span></div>` : ''}
-      </div>
-      <p>Please log in to your dashboard to review and manage this rescue operation.</p>
-    `;
-
-    const html = wrapEmailTemplate('Food Rescue Request Placed', bodyContent);
-    const recipients = Array.isArray(data.to) ? data.to.join(', ') : data.to;
-
-    await transporter.sendMail({
-      from: getFromAddress(),
-      to: recipients,
-      subject: 'SmartFoodRescue - Food Rescue Request Placed',
-      text: `SmartFoodRescue: Request placed for ${data.foodType} (${data.quantity} ${unit}) by ${data.ngoName}. Request ID: #${data.requestId.slice(-6)}`,
-      html,
-    });
-
-    console.log(`[EmailService] Request placed email sent to: ${recipients}`);
-    return true;
-  } catch (error: any) {
-    console.error('[EmailService] Failed to send request placed email:', error?.message || error);
-    return false;
-  }
+  const html = wrapEmailTemplate('Food Rescue Request Placed', bodyContent);
+  return sendEmailSafe({
+    to: data.to,
+    subject: 'SmartFoodRescue - Food Rescue Request Placed',
+    text: `SmartFoodRescue: Request placed for ${data.foodType} (${data.quantity} ${unit}) by ${data.ngoName}. Request ID: #${data.requestId.slice(-6)}`,
+    html,
+  });
 };
 
 export interface DeliveredEmailData {
@@ -131,46 +363,32 @@ export interface DeliveredEmailData {
 }
 
 export const sendDeliveredEmail = async (data: DeliveredEmailData): Promise<boolean> => {
-  try {
-    const transporter = getTransporter();
-    if (!transporter) return false;
+  const unit = data.unit || 'portions';
+  const deliveryTimeStr = data.deliveryDate ? new Date(data.deliveryDate).toLocaleString() : new Date().toLocaleString();
 
-    const unit = data.unit || 'portions';
-    const deliveryTimeStr = data.deliveryDate ? new Date(data.deliveryDate).toLocaleString() : new Date().toLocaleString();
+  const bodyContent = `
+    <p>Good news! The surplus food donation has been safely transported and delivered to the recipient NGO.</p>
+    <div class="card">
+      <div class="row"><span class="label">Pickup ID:</span><span class="value">#${data.pickupId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Rescued:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity Delivered:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">Donor:</span><span class="value">${data.donorName}</span></div>
+      <div class="row"><span class="label">Receiving NGO:</span><span class="value">${data.ngoName}</span></div>
+      <div class="row"><span class="label">Transported By:</span><span class="value">${data.volunteerName}</span></div>
+      <div class="row"><span class="label">Delivery Status:</span><span class="value"><span class="badge">DELIVERED</span></span></div>
+      <div class="row"><span class="label">Delivery Time:</span><span class="value">${deliveryTimeStr}</span></div>
+      ${data.deliveryLocation ? `<div class="row"><span class="label">NGO Facility:</span><span class="value">${data.deliveryLocation}</span></div>` : ''}
+    </div>
+    <p>The NGO can now proceed with community distribution. Thank you for making a tangible difference!</p>
+  `;
 
-    const bodyContent = `
-      <p>Good news! The surplus food donation has been safely transported and delivered to the recipient NGO.</p>
-      <div class="card">
-        <div class="row"><span class="label">Pickup ID:</span><span class="value">#${data.pickupId.slice(-6).toUpperCase()}</span></div>
-        <div class="row"><span class="label">Food Rescued:</span><span class="value">${data.foodType}</span></div>
-        <div class="row"><span class="label">Quantity Delivered:</span><span class="value">${data.quantity} ${unit}</span></div>
-        <div class="row"><span class="label">Donor:</span><span class="value">${data.donorName}</span></div>
-        <div class="row"><span class="label">Receiving NGO:</span><span class="value">${data.ngoName}</span></div>
-        <div class="row"><span class="label">Transported By:</span><span class="value">${data.volunteerName}</span></div>
-        <div class="row"><span class="label">Delivery Status:</span><span class="value"><span class="badge">DELIVERED</span></span></div>
-        <div class="row"><span class="label">Delivery Time:</span><span class="value">${deliveryTimeStr}</span></div>
-        ${data.deliveryLocation ? `<div class="row"><span class="label">NGO Facility:</span><span class="value">${data.deliveryLocation}</span></div>` : ''}
-      </div>
-      <p>The NGO can now proceed with community distribution. Thank you for making a tangible difference!</p>
-    `;
-
-    const html = wrapEmailTemplate('Food Delivered Successfully', bodyContent);
-    const recipients = Array.isArray(data.to) ? data.to.join(', ') : data.to;
-
-    await transporter.sendMail({
-      from: getFromAddress(),
-      to: recipients,
-      subject: 'SmartFoodRescue - Food Delivered Successfully',
-      text: `SmartFoodRescue: Food (${data.foodType}, ${data.quantity} ${unit}) successfully delivered to ${data.ngoName} by volunteer ${data.volunteerName}. Pickup ID: #${data.pickupId.slice(-6)}`,
-      html,
-    });
-
-    console.log(`[EmailService] Delivery email sent to: ${recipients}`);
-    return true;
-  } catch (error: any) {
-    console.error('[EmailService] Failed to send delivered email:', error?.message || error);
-    return false;
-  }
+  const html = wrapEmailTemplate('Food Delivered Successfully', bodyContent);
+  return sendEmailSafe({
+    to: data.to,
+    subject: 'Food Donation Delivered Successfully - SmartFoodRescue',
+    text: `SmartFoodRescue: Food (${data.foodType}, ${data.quantity} ${unit}) successfully delivered to ${data.ngoName} by volunteer ${data.volunteerName}. Pickup ID: #${data.pickupId.slice(-6)}`,
+    html,
+  });
 };
 
 export interface DistributedEmailData {
@@ -186,43 +404,29 @@ export interface DistributedEmailData {
 }
 
 export const sendDistributedEmail = async (data: DistributedEmailData): Promise<boolean> => {
-  try {
-    const transporter = getTransporter();
-    if (!transporter) return false;
+  const unit = data.unit || 'portions';
+  const distDateStr = data.distributionDate ? new Date(data.distributionDate).toLocaleString() : new Date().toLocaleString();
 
-    const unit = data.unit || 'portions';
-    const distDateStr = data.distributionDate ? new Date(data.distributionDate).toLocaleString() : new Date().toLocaleString();
+  const bodyContent = `
+    <p>The food rescue cycle is now complete! The donated food has been successfully distributed to community beneficiaries.</p>
+    <div class="card">
+      <div class="row"><span class="label">Distribution ID:</span><span class="value">#${data.distributionId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity Distributed:</span><span class="value">${data.quantityDistributed} ${unit}</span></div>
+      <div class="row"><span class="label">Distributing NGO:</span><span class="value">${data.ngoName}</span></div>
+      ${data.beneficiaryCount ? `<div class="row"><span class="label">People / Beneficiaries Fed:</span><span class="value" style="color: #166534; font-weight: 700;">${data.beneficiaryCount}</span></div>` : ''}
+      <div class="row"><span class="label">Distribution Date:</span><span class="value">${distDateStr}</span></div>
+      <div class="row"><span class="label">Final Status:</span><span class="value"><span class="badge">DISTRIBUTED</span></span></div>
+      ${data.notes ? `<div class="row"><span class="label">Field Notes:</span><span class="value">${data.notes}</span></div>` : ''}
+    </div>
+    <p>Thank you to all stakeholders for turning surplus food into warm meals and community impact!</p>
+  `;
 
-    const bodyContent = `
-      <p>The food rescue cycle is now complete! The donated food has been successfully distributed to community beneficiaries.</p>
-      <div class="card">
-        <div class="row"><span class="label">Distribution ID:</span><span class="value">#${data.distributionId.slice(-6).toUpperCase()}</span></div>
-        <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
-        <div class="row"><span class="label">Quantity Distributed:</span><span class="value">${data.quantityDistributed} ${unit}</span></div>
-        <div class="row"><span class="label">Distributing NGO:</span><span class="value">${data.ngoName}</span></div>
-        ${data.beneficiaryCount ? `<div class="row"><span class="label">People / Beneficiaries Fed:</span><span class="value" style="color: #166534; font-weight: 700;">${data.beneficiaryCount}</span></div>` : ''}
-        <div class="row"><span class="label">Distribution Date:</span><span class="value">${distDateStr}</span></div>
-        <div class="row"><span class="label">Final Status:</span><span class="value"><span class="badge">DISTRIBUTED</span></span></div>
-        ${data.notes ? `<div class="row"><span class="label">Field Notes:</span><span class="value">${data.notes}</span></div>` : ''}
-      </div>
-      <p>Thank you to all stakeholders for turning surplus food into warm meals and community impact!</p>
-    `;
-
-    const html = wrapEmailTemplate('Food Distributed Successfully', bodyContent);
-    const recipients = Array.isArray(data.to) ? data.to.join(', ') : data.to;
-
-    await transporter.sendMail({
-      from: getFromAddress(),
-      to: recipients,
-      subject: 'SmartFoodRescue - Food Distributed Successfully',
-      text: `SmartFoodRescue: Food (${data.foodType}) successfully distributed by ${data.ngoName} to ${data.beneficiaryCount || 'community'} beneficiaries. Distribution ID: #${data.distributionId.slice(-6)}`,
-      html,
-    });
-
-    console.log(`[EmailService] Distribution email sent to: ${recipients}`);
-    return true;
-  } catch (error: any) {
-    console.error('[EmailService] Failed to send distributed email:', error?.message || error);
-    return false;
-  }
+  const html = wrapEmailTemplate('Food Distributed Successfully', bodyContent);
+  return sendEmailSafe({
+    to: data.to,
+    subject: 'Food Donation Successfully Distributed - SmartFoodRescue',
+    text: `SmartFoodRescue: Food (${data.foodType}) successfully distributed by ${data.ngoName} to ${data.beneficiaryCount || 'community'} beneficiaries. Distribution ID: #${data.distributionId.slice(-6)}`,
+    html,
+  });
 };

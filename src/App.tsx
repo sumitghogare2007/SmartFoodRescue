@@ -20,6 +20,7 @@ import DonationsPage from './pages/donations/DonationsPage';
 import NewDonation from './pages/donations/NewDonation';
 import DonationDetail from './pages/donations/DonationDetail';
 import PickupsPage from './pages/pickups/PickupsPage';
+import UsersPage from './pages/admin/UsersPage';
 import Settings from './pages/Settings';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +71,8 @@ const App = () => {
                 <Route path="pickups">
                   <Route index element={<PickupsPage />} />
                 </Route>
+
+                <Route path="users" element={<UsersPage />} />
 
                 <Route path="settings" element={<Settings />} />
               </Route>

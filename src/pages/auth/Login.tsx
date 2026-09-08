@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Heart } from 'lucide-react';
+import Logo from '../../components/ui/Logo';
 import toast from 'react-hot-toast';
 
 const Login = () => {
@@ -28,8 +28,10 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Heart className="mx-auto h-12 w-12 text-[#166534]" />
-        <h2 className="mt-6 text-3xl font-extrabold text-[#1e3a5f]">
+        <div className="flex justify-center mb-3">
+          <Logo size={44} showText={true} textSize="text-2xl font-bold" />
+        </div>
+        <h2 className="mt-4 text-2xl font-extrabold text-[#1e3a5f]">
           Sign in to your account
         </h2>
       </div>

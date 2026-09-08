@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Logo from '../ui/Logo';
 import { 
   LayoutDashboard, 
   Package, 
@@ -23,9 +24,8 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full flex flex-col transition-colors">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-[#1e3a5f] dark:text-emerald-400">
-        <Heart className="text-[#166534] dark:text-emerald-400 w-6 h-6" />
-        <h1 className="text-xl font-bold">SmartFoodRescue</h1>
+      <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+        <Logo size={30} showText={true} textSize="text-xl" />
       </div>
       
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import VolunteerSelectModal from '../../components/volunteer/VolunteerSelectModal';
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 
 const PickupsPage = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
@@ -27,7 +28,12 @@ const PickupsPage = () => {
 
   useEffect(() => {
     fetchPickups();
-  }, []);
+  }, [authUser]);
+
+  useRealtimeSync({
+    onSync: () => fetchPickups(),
+    events: ['pickup:updated', 'distribution:completed', 'request:accepted', 'donation:updated'],
+  });
 
   const fetchPickups = async () => {
     try {

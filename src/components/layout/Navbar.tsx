@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, UserCircle } from 'lucide-react';
+import Logo from '../ui/Logo';
 
 const Navbar = () => {
   const { authUser, signOut } = useAuth();
@@ -7,7 +8,7 @@ const Navbar = () => {
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 transition-colors">
       <div className="flex items-center">
-        {/* Empty space for mobile menu toggle if needed */}
+        <Logo size={28} showText={true} textSize="text-base sm:text-lg font-bold" />
       </div>
       
       <div className="flex items-center gap-4">

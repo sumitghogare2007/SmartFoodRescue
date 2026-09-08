@@ -5,6 +5,7 @@ import type { FoodDonation } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Package, Search, Clock, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 
 const DonationsPage = () => {
   const [donations, setDonations] = useState<FoodDonation[]>([]);
@@ -18,6 +19,11 @@ const DonationsPage = () => {
   useEffect(() => {
     fetchDonations();
   }, []);
+
+  useRealtimeSync({
+    onSync: () => fetchDonations(),
+    events: ['donation:created', 'donation:updated'],
+  });
 
   const fetchDonations = async () => {
     try {

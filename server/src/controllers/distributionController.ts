@@ -7,6 +7,7 @@ import FoodDonation from '../models/FoodDonation';
 import PickupTracking from '../models/PickupTracking';
 import NGO from '../models/NGO';
 import { sendDistributedEmail } from '../services/emailService';
+import { eventService } from '../services/eventService';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -165,6 +166,18 @@ export const complete = async (req: Request, res: Response, next: NextFunction) 
         console.error('[EmailService] Error preparing distributed email:', err.message);
       }
     })();
+
+    // Broadcast real-time events across all connected dashboards
+    eventService.broadcast('distribution:completed', {
+      distributionId: distribution._id,
+      pickupId: pickup._id,
+      beneficiaryCount: distribution.beneficiaryCount,
+      quantityDistributed: distribution.quantityDistributed
+    });
+    eventService.broadcast('pickup:updated', { pickupId: pickup._id, status: 'DISTRIBUTED' });
+    if (request && request.donationId) {
+      eventService.broadcast('donation:updated', { donationId: request.donationId, status: 'DISTRIBUTED' });
+    }
 
     res.json(distribution);
   } catch (error) {

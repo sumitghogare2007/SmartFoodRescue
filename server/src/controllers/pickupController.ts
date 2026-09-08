@@ -6,7 +6,8 @@ import FoodDonation from '../models/FoodDonation';
 import Distribution from '../models/Distribution';
 import Volunteer from '../models/Volunteer';
 import NGO from '../models/NGO';
-import { sendDeliveredEmail } from '../services/emailService';
+import { sendDeliveredEmail, sendVolunteerStatusEmail } from '../services/emailService';
+import { eventService } from '../services/eventService';
 
 // Mask aadhaar helper: XXXX-XXXX-1234
 const maskAadhaar = (aadhaar?: string): string | undefined => {
@@ -205,44 +206,66 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
       }
     }
 
-    // Trigger email notification when status changes to DELIVERED (asynchronous, non-blocking)
-    if (status === 'DELIVERED') {
-      (async () => {
-        try {
-          const fullPickup = await Pickup.findById(pickup._id)
-            .populate({
-              path: 'requestId',
-              populate: [
-                {
-                  path: 'donationId',
-                  populate: [
-                    { path: 'donorId', populate: ['userId', 'locationId'] },
-                    { path: 'locationId' }
-                  ]
-                },
-                {
-                  path: 'ngoId',
-                  populate: ['userId', 'locationId']
-                }
-              ]
-            })
-            .populate({
-              path: 'volunteerId',
-              populate: { path: 'userId' }
-            });
+    // Trigger email notification for status changes to donor's registered email (asynchronous, non-blocking)
+    (async () => {
+      try {
+        const fullPickup = await Pickup.findById(pickup._id)
+          .populate({
+            path: 'requestId',
+            populate: [
+              {
+                path: 'donationId',
+                populate: [
+                  { path: 'donorId', populate: ['userId', 'locationId'] },
+                  { path: 'locationId' }
+                ]
+              },
+              {
+                path: 'ngoId',
+                populate: ['userId', 'locationId']
+              }
+            ]
+          })
+          .populate({
+            path: 'volunteerId',
+            populate: { path: 'userId' }
+          });
 
-          const reqObj = fullPickup?.requestId as any;
-          const don = reqObj?.donationId as any;
-          const donor = don?.donorId as any;
-          const ngo = reqObj?.ngoId as any;
-          const vol = fullPickup?.volunteerId as any;
+        const reqObj = fullPickup?.requestId as any;
+        const don = reqObj?.donationId as any;
+        const donor = don?.donorId as any;
+        const ngo = reqObj?.ngoId as any;
+        const vol = fullPickup?.volunteerId as any;
 
-          const donorEmail = donor?.contactEmail || donor?.userId?.email;
-          const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
-          const volEmail = vol?.userId?.email;
+        const donorEmail = donor?.userId?.email || donor?.contactEmail;
+        const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
+        const volEmail = vol?.userId?.email;
 
+        if (donorEmail && don) {
+          const donorLoc = don.locationId as any || donor?.locationId as any;
+          const ngoLoc = ngo?.locationId as any;
+          const pickupLocStr = donorLoc ? `${donorLoc.address}, ${donorLoc.area}, ${donorLoc.city}` : 'Donor Address';
+          const ngoLocStr = ngoLoc ? `${ngoLoc.address}, ${ngoLoc.area}, ${ngoLoc.city}` : 'NGO Center';
+
+          await sendVolunteerStatusEmail({
+            to: donorEmail,
+            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Food Donor',
+            donationId: don._id.toString(),
+            foodType: don.foodType || 'Surplus Food',
+            quantity: don.quantity || reqObj?.requestedQuantity || 0,
+            unit: don.unit || 'portions',
+            ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
+            volunteerName: vol?.userId?.name || 'Fleet Volunteer',
+            volunteerPhone: vol?.userId?.phone,
+            status,
+            pickupLocation: pickupLocStr,
+            deliveryLocation: ngoLocStr,
+            notes: note
+          });
+        }
+
+        if (status === 'DELIVERED') {
           const recipients = Array.from(new Set([donorEmail, ngoEmail, volEmail].filter(Boolean) as string[]));
-
           if (recipients.length > 0 && don) {
             const donorLoc = don.locationId as any || donor?.locationId as any;
             const ngoLoc = ngo?.locationId as any;
@@ -263,11 +286,15 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
               deliveryLocation: ngoLocStr,
             });
           }
-        } catch (err: any) {
-          console.error('[EmailService] Error preparing delivered email:', err.message);
         }
-      })();
-    }
+      } catch (err: any) {
+        console.error('[EmailService] Error preparing status change email:', err?.message || err);
+      }
+    })();
+
+    // Broadcast real-time events
+    eventService.broadcast('pickup:updated', { pickupId: pickup._id, status });
+    eventService.broadcast('donation:updated', { donationId: request?.donationId, status });
 
     res.json(pickup);
   } catch (error) {
@@ -319,6 +346,52 @@ export const assignVolunteer = async (req: Request, res: Response, next: NextFun
       note
     });
     await tracking.save();
+
+    // Trigger email notification for assignment
+    (async () => {
+      try {
+        const fullPickup = await Pickup.findById(pickup._id)
+          .populate({
+            path: 'requestId',
+            populate: [
+              { path: 'donationId', populate: [{ path: 'donorId', populate: ['userId', 'locationId'] }] },
+              { path: 'ngoId', populate: 'userId' }
+            ]
+          })
+          .populate({
+            path: 'volunteerId',
+            populate: { path: 'userId' }
+          });
+
+        const reqObj = fullPickup?.requestId as any;
+        const don = reqObj?.donationId as any;
+        const donor = don?.donorId as any;
+        const ngo = reqObj?.ngoId as any;
+        const vol = fullPickup?.volunteerId as any;
+
+        const donorEmail = donor?.userId?.email || donor?.contactEmail;
+        if (donorEmail && don) {
+          await sendVolunteerStatusEmail({
+            to: donorEmail,
+            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Food Donor',
+            donationId: don._id.toString(),
+            foodType: don.foodType || 'Surplus Food',
+            quantity: don.quantity || reqObj?.requestedQuantity || 0,
+            unit: don.unit || 'portions',
+            ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
+            volunteerName: vol?.userId?.name || 'Assigned Volunteer',
+            volunteerPhone: vol?.userId?.phone,
+            status: 'ASSIGNED',
+            notes: note
+          });
+        }
+      } catch (err: any) {
+        console.error('[EmailService] Error sending volunteer assignment email:', err?.message || err);
+      }
+    })();
+
+    // Broadcast real-time event
+    eventService.broadcast('pickup:updated', { pickupId: pickup._id, status: 'ASSIGNED', volunteerId: volunteer._id });
 
     res.json(pickup);
   } catch (error) {
