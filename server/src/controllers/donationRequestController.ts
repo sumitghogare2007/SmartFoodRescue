@@ -6,6 +6,7 @@ import Pickup from '../models/Pickup';
 import Volunteer from '../models/Volunteer';
 import PickupTracking from '../models/PickupTracking';
 import Donor from '../models/Donor';
+import Location from '../models/Location';
 import { sendNgoAcceptanceEmail, sendRequestPlacedEmail } from '../services/emailService';
 import { eventService } from '../services/eventService';
 
@@ -15,7 +16,24 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
     const filter: any = {};
 
     if (ngoId === 'me' && req.user) {
-      const ngo = await NGO.findOne({ userId: req.user._id });
+      let ngo = await NGO.findOne({ userId: req.user._id });
+      if (!ngo && (req.user.userType === 'NGO' || req.user.userType === 'ADMIN')) {
+        if (req.user.userType === 'ADMIN') {
+          ngo = await NGO.findOne();
+        } else {
+          const defaultLoc = await Location.findOne();
+          ngo = new NGO({
+            userId: req.user._id,
+            ngoName: req.user.name || 'Community Partner NGO',
+            registrationNo: `REG-${Date.now().toString().slice(-6)}`,
+            contactNo: req.user.phone || '9999999999',
+            contactEmail: req.user.email,
+            locationId: defaultLoc?._id,
+            isVerified: true
+          });
+          await ngo.save();
+        }
+      }
       if (!ngo) return res.json([]);
       filter.ngoId = ngo._id;
     } else if (ngoId) {
@@ -57,8 +75,25 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ngo = await NGO.findOne({ userId: req.user._id });
-    if (!ngo) return res.status(403).json({ message: 'Only NGOs can create requests' });
+    let ngo = await NGO.findOne({ userId: req.user._id });
+    if (!ngo && (req.user.userType === 'NGO' || req.user.userType === 'ADMIN')) {
+      if (req.user.userType === 'ADMIN') {
+        ngo = await NGO.findOne();
+      } else {
+        const defaultLoc = await Location.findOne();
+        ngo = new NGO({
+          userId: req.user._id,
+          ngoName: req.user.name || 'Community Partner NGO',
+          registrationNo: `REG-${Date.now().toString().slice(-6)}`,
+          contactNo: req.user.phone || '9999999999',
+          contactEmail: req.user.email,
+          locationId: defaultLoc?._id,
+          isVerified: true
+        });
+        await ngo.save();
+      }
+    }
+    if (!ngo) return res.status(403).json({ message: 'Only registered NGOs can create food requests' });
 
     const donation = await FoodDonation.findById(req.body.donationId);
     if (!donation || donation.status !== 'AVAILABLE') {

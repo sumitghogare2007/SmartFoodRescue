@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import NGO from '../models/NGO';
+import Location from '../models/Location';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -31,7 +32,25 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 
 export const getMyProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ngo = await NGO.findOne({ userId: req.user._id }).populate('locationId');
+    let ngo = await NGO.findOne({ userId: req.user._id }).populate('locationId');
+    if (!ngo && (req.user.userType === 'NGO' || req.user.userType === 'ADMIN')) {
+      if (req.user.userType === 'ADMIN') {
+        ngo = await NGO.findOne().populate('locationId');
+      } else {
+        const defaultLoc = await Location.findOne();
+        ngo = new NGO({
+          userId: req.user._id,
+          ngoName: req.user.name || 'Community Partner NGO',
+          registrationNo: `REG-${Date.now().toString().slice(-6)}`,
+          contactNo: req.user.phone || '9999999999',
+          contactEmail: req.user.email,
+          locationId: defaultLoc?._id,
+          isVerified: true
+        });
+        await ngo.save();
+        ngo = await NGO.findById(ngo._id).populate('locationId');
+      }
+    }
     if (!ngo) return res.status(404).json({ message: 'Profile not found' });
     res.json(ngo);
   } catch (error) {

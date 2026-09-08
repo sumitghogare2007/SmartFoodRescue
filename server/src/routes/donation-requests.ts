@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/', verifyToken, getAll);
 router.get('/:id', verifyToken, getById);
-router.post('/', verifyToken, requireRole(['NGO']), create);
+router.post('/', verifyToken, requireRole(['NGO', 'ADMIN']), create);
 router.put('/:id/accept', verifyToken, requireRole(['DONOR', 'ADMIN']), accept);
 router.put('/:id/reject', verifyToken, requireRole(['DONOR', 'ADMIN']), reject);
 router.put('/:id/cancel', verifyToken, requireRole(['NGO', 'ADMIN']), cancel);
