@@ -265,26 +265,45 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
         }
 
         if (status === 'DELIVERED') {
-          const recipients = Array.from(new Set([donorEmail, ngoEmail, volEmail].filter(Boolean) as string[]));
-          if (recipients.length > 0 && don) {
+          if (donorEmail && don) {
             const donorLoc = don.locationId as any || donor?.locationId as any;
             const ngoLoc = ngo?.locationId as any;
             const pickupLocStr = donorLoc ? `${donorLoc.address}, ${donorLoc.area}, ${donorLoc.city}` : 'Donor Address';
             const ngoLocStr = ngoLoc ? `${ngoLoc.address}, ${ngoLoc.area}, ${ngoLoc.city}` : 'NGO Center';
 
+            const donorDisplayName = donor?.userId?.name || donor?.contactName || donor?.organizationName || 'Food Donor';
+
+            // Send primary Delivered email to the registered donor
             await sendDeliveredEmail({
-              to: recipients,
+              to: donorEmail,
               donationId: don._id.toString(),
               foodType: don.foodType || 'Surplus Food',
               quantity: don.quantity || reqObj?.requestedQuantity || 0,
               unit: don.unit || 'portions',
-              donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Food Donor',
+              donorName: donorDisplayName,
               ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
               volunteerName: vol?.userId?.name || 'Assigned Volunteer',
               deliveryDate: new Date(),
               pickupLocation: pickupLocStr,
               deliveryLocation: ngoLocStr,
             });
+
+            // Also notify NGO if distinct registered email
+            if (ngoEmail && ngoEmail !== donorEmail) {
+              await sendDeliveredEmail({
+                to: ngoEmail,
+                donationId: don._id.toString(),
+                foodType: don.foodType || 'Surplus Food',
+                quantity: don.quantity || reqObj?.requestedQuantity || 0,
+                unit: don.unit || 'portions',
+                donorName: donorDisplayName,
+                ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
+                volunteerName: vol?.userId?.name || 'Assigned Volunteer',
+                deliveryDate: new Date(),
+                pickupLocation: pickupLocStr,
+                deliveryLocation: ngoLocStr,
+              });
+            }
           }
         }
       } catch (err: any) {

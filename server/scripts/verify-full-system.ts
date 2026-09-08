@@ -64,8 +64,11 @@ async function runVerification() {
     assert(true, 'SMTP startup verification executes safely without throwing or revealing secrets');
 
     // 4. Test Email Builders with Donor Registered Email
-    console.log('\nTesting email generation for all workflow stages...');
-    const donorUser = await User.findOne({ userType: 'DONOR' });
+    console.log('\nTesting email generation for all workflow stages with dynamic donor resolution...');
+    let donorUser = await User.findOne({ email: 'sumitghogare2007@gmail.com' });
+    if (!donorUser) {
+      donorUser = await User.findOne({ userType: 'DONOR' });
+    }
     const ngoUser = await User.findOne({ userType: 'NGO' });
     const volunteerUser = await User.findOne({ userType: 'VOLUNTEER' });
     const adminUser = await User.findOne({ userType: 'ADMIN' });
@@ -75,12 +78,13 @@ async function runVerification() {
     assert(!!volunteerUser, `Found registered Volunteer in MongoDB (${volunteerUser?.email})`);
     assert(!!adminUser, `Found registered Admin in MongoDB (${adminUser?.email})`);
 
-    const donorEmail = donorUser?.email || 'donor@test.org';
+    const donorEmail = donorUser?.email || 'sumitghogare2007@gmail.com';
+    assert(donorEmail !== 'smartfoodrescue1@gmail.com', `Recipient is donor's registered email (${donorEmail}), NOT sender`);
 
     // A: Donor creation confirmation email
     const donationCreatedSent = await sendDonationCreatedEmail({
       to: donorEmail,
-      donorName: donorUser?.name || 'Verified Donor',
+      donorName: donorUser?.name || 'Sumit',
       donationId: '66a1234567890abcdef12345',
       foodType: 'Fresh Dal Khichdi & Rotis',
       foodCategory: 'Cooked',
@@ -88,28 +92,28 @@ async function runVerification() {
       unit: 'meals',
       pickupLocation: 'Bandra West, Mumbai 400050',
       expiryTime: new Date(Date.now() + 86400000),
-      status: 'AVAILABLE'
+      status: 'Waiting for NGO Acceptance'
     });
-    assert(true, 'sendDonationCreatedEmail executed safely without exception');
+    assert(donationCreatedSent, 'sendDonationCreatedEmail executed safely and confirmed delivery');
 
     // B: NGO acceptance email to donor
     const ngoAcceptanceSent = await sendNgoAcceptanceEmail({
       to: donorEmail,
-      donorName: donorUser?.name || 'Verified Donor',
+      donorName: donorUser?.name || 'Sumit',
       donationId: '66a1234567890abcdef12345',
       foodType: 'Fresh Dal Khichdi & Rotis',
       quantity: 40,
       unit: 'meals',
       ngoName: 'Asha Community Kitchen',
       pickupLocation: 'Bandra West, Mumbai 400050',
-      status: 'ACCEPTED'
+      status: 'Accepted'
     });
-    assert(true, 'sendNgoAcceptanceEmail executed safely with official subject and content');
+    assert(ngoAcceptanceSent, 'sendNgoAcceptanceEmail executed safely with official subject and content');
 
     // C: Volunteer status emails
     await sendVolunteerStatusEmail({
       to: donorEmail,
-      donorName: donorUser?.name || 'Verified Donor',
+      donorName: donorUser?.name || 'Sumit',
       donationId: '66a1234567890abcdef12345',
       foodType: 'Fresh Dal Khichdi & Rotis',
       quantity: 40,
@@ -145,10 +149,10 @@ async function runVerification() {
     });
     assert(true, 'sendVolunteerStatusEmail for DISTRIBUTED executed safely');
 
-    // D: Dedicated Delivered Email
-    await sendDeliveredEmail({
+    // D: Dedicated Delivered Email to Donor
+    const deliveredSent = await sendDeliveredEmail({
       to: donorEmail,
-      donorName: donorUser?.name || 'Verified Donor',
+      donorName: donorUser?.name || 'Sumit',
       donationId: '66a1234567890abcdef12345',
       foodType: 'Fresh Dal Khichdi & Rotis',
       quantity: 40,
@@ -157,7 +161,82 @@ async function runVerification() {
       volunteerName: 'Vikram Joshi',
       deliveryDate: new Date()
     });
-    assert(true, 'sendDeliveredEmail with donor registered email executed safely');
+    assert(deliveredSent, 'sendDeliveredEmail with donor registered email executed safely and confirmed delivery');
+
+    // E: Real Dynamic Recipient Resolution Test Scenario with sumitghogare2007@gmail.com
+    console.log('\nTesting exact dynamic donor resolution flow with sumitghogare2007@gmail.com...');
+    const sumitEmail = 'sumitghogare2007@gmail.com';
+    let sumitUser = await User.findOne({ email: sumitEmail });
+    if (!sumitUser) {
+      sumitUser = new User({
+        name: 'Sumit',
+        email: sumitEmail,
+        phone: '9876543210',
+        passwordHash: 'dummy_hash_for_test',
+        userType: 'DONOR'
+      });
+      await sumitUser.save();
+    }
+
+    let sumitDonor = await Donor.findOne({ userId: sumitUser._id });
+    if (!sumitDonor) {
+      const anyLocation = await Location.findOne();
+      sumitDonor = new Donor({
+        userId: sumitUser._id,
+        donorType: 'Individual',
+        organizationName: 'Sumit Ghogare',
+        contactName: 'Sumit',
+        contactPhone: '9876543210',
+        contactEmail: sumitEmail,
+        locationId: anyLocation?._id,
+        isVerified: true
+      });
+      await sumitDonor.save();
+    }
+
+    // Resolve donor's registered email from MongoDB
+    const resolvedFromDb = sumitDonor.contactEmail || sumitUser.email;
+    assert(resolvedFromDb === sumitEmail, `Successfully retrieved donor registered email from MongoDB (${resolvedFromDb})`);
+    assert(resolvedFromDb !== 'smartfoodrescue1@gmail.com', 'Resolved recipient is NOT the sender address');
+
+    // Send the real confirmation email to sumitghogare2007@gmail.com
+    const sumitCreatedSent = await sendDonationCreatedEmail({
+      to: resolvedFromDb,
+      donorName: 'Sumit',
+      donationId: '66a1234567890abcdef12345',
+      foodType: 'Fresh Dal Khichdi & Rotis',
+      quantity: 25,
+      unit: 'meals',
+      pickupLocation: 'Bandra West, Mumbai',
+      status: 'Waiting for NGO Acceptance'
+    });
+    assert(sumitCreatedSent, `Email #1 successfully delivered to ${sumitEmail}`);
+
+    const sumitAcceptedSent = await sendNgoAcceptanceEmail({
+      to: resolvedFromDb,
+      donorName: 'Sumit',
+      donationId: '66a1234567890abcdef12345',
+      foodType: 'Fresh Dal Khichdi & Rotis',
+      quantity: 25,
+      unit: 'meals',
+      ngoName: 'Asha Community Kitchen',
+      pickupLocation: 'Bandra West, Mumbai',
+      status: 'Accepted'
+    });
+    assert(sumitAcceptedSent, `Email #2 successfully delivered to ${sumitEmail}`);
+
+    const sumitDeliveredSent = await sendDeliveredEmail({
+      to: resolvedFromDb,
+      donorName: 'Sumit',
+      donationId: '66a1234567890abcdef12345',
+      foodType: 'Fresh Dal Khichdi & Rotis',
+      quantity: 25,
+      unit: 'meals',
+      ngoName: 'Asha Community Kitchen',
+      volunteerName: 'Vikram Joshi',
+      deliveryDate: new Date()
+    });
+    assert(sumitDeliveredSent, `Email #3 successfully delivered to ${sumitEmail}`);
 
     // 5. Complete End-to-End Database Lifecycle Flow
     console.log('\nTesting complete database lifecycle & audit trail in MongoDB Atlas...');

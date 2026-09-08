@@ -172,9 +172,10 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
         if (donorEmail) {
           const loc = populated?.locationId as any;
           const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
+          const donorDisplayName = req.user?.name || donor.contactName || donor.organizationName || 'Food Donor';
           await sendDonationCreatedEmail({
             to: donorEmail,
-            donorName: donor.organizationName || donor.contactName || req.user.name || 'Food Donor',
+            donorName: donorDisplayName,
             donationId: donation._id.toString(),
             foodType: donation.foodType,
             foodCategory: donation.foodCategory,

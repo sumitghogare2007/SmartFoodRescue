@@ -193,9 +193,10 @@ export const accept = async (req: Request, res: Response, next: NextFunction) =>
           const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
           const volUser = (fullVol as any)?.userId;
 
+          const donorDisplayName = donor?.userId?.name || donor?.contactName || donor?.organizationName || 'Valued Donor';
           await sendNgoAcceptanceEmail({
             to: donorEmail,
-            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Valued Donor',
+            donorName: donorDisplayName,
             donationId: fullDonation._id.toString(),
             foodType: fullDonation.foodType,
             quantity: request.requestedQuantity,
