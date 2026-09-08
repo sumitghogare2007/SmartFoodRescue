@@ -57,8 +57,21 @@ import FoodItem from '../models/FoodItem';
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const donor = await Donor.findOne({ userId: req.user._id });
-    if (!donor) return res.status(403).json({ message: 'Only donors can create donations' });
+    let donor = await Donor.findOne({ userId: req.user._id });
+    if (!donor) {
+      const defaultLoc = await Location.findOne();
+      donor = new Donor({
+        userId: req.user._id,
+        donorType: 'Individual',
+        organizationName: req.user?.name || 'Registered Donor',
+        contactName: req.user?.name || 'Registered Donor',
+        contactPhone: req.user?.phone || '9999999999',
+        contactEmail: req.user?.email,
+        locationId: defaultLoc?._id,
+        isVerified: true
+      });
+      await donor.save();
+    }
 
     const {
       foodType,
@@ -231,8 +244,21 @@ export const cancel = async (req: Request, res: Response, next: NextFunction) =>
 
 export const getMyDonations = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const donor = await Donor.findOne({ userId: req.user._id });
-    if (!donor) return res.status(404).json({ message: 'Donor profile not found' });
+    let donor = await Donor.findOne({ userId: req.user._id });
+    if (!donor) {
+      const defaultLoc = await Location.findOne();
+      donor = new Donor({
+        userId: req.user._id,
+        donorType: 'Individual',
+        organizationName: req.user?.name || 'Registered Donor',
+        contactName: req.user?.name || 'Registered Donor',
+        contactPhone: req.user?.phone || '9999999999',
+        contactEmail: req.user?.email,
+        locationId: defaultLoc?._id,
+        isVerified: true
+      });
+      await donor.save();
+    }
     
     const donations = await FoodDonation.find({ donorId: donor._id }).populate('locationId').sort({ createdAt: -1 });
     res.json(donations.map(maskDonation));

@@ -24,10 +24,9 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 
     if (donorId === 'me' && req.user) {
       const donor = await Donor.findOne({ userId: req.user._id });
-      if (donor) {
-        const donations = await FoodDonation.find({ donorId: donor._id }).select('_id');
-        filter.donationId = { $in: donations.map(d => d._id) };
-      }
+      if (!donor) return res.json([]);
+      const donations = await FoodDonation.find({ donorId: donor._id }).select('_id');
+      filter.donationId = { $in: donations.map(d => d._id) };
     } else if (donationId) {
       filter.donationId = donationId;
     }

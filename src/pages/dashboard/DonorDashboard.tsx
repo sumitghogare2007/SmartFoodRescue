@@ -29,22 +29,32 @@ const DonorDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [donationsData, requestsRes, pickupsRes] = await Promise.all([
+      const [donationsRes, requestsRes, pickupsRes] = await Promise.allSettled([
         donationService.getMyDonations(),
         apiClient.get('/api/donation-requests?donorId=me'),
         apiClient.get('/api/pickups')
       ]);
+
+      const donationsData: FoodDonation[] = donationsRes.status === 'fulfilled' ? donationsRes.value : [];
+      const requestsData: DonationRequest[] = requestsRes.status === 'fulfilled' ? (requestsRes.value.data || []) : [];
+      const pickupsRaw: Pickup[] = pickupsRes.status === 'fulfilled' ? (pickupsRes.value.data || []) : [];
+
       setDonations(donationsData);
-      setRequests(requestsRes.data);
-      
+      setRequests(requestsData);
+
       // Filter pickups related to donor's donations
       const myDonationIds = new Set(donationsData.map(d => d._id));
-      const myPickups = (pickupsRes.data as Pickup[]).filter(p => {
+      const myPickups = pickupsRaw.filter(p => {
         const req = p.requestId as any;
         const donId = typeof req?.donationId === 'object' ? req?.donationId?._id : req?.donationId;
-        return myDonationIds.has(donId);
+        return donId && myDonationIds.has(donId);
       });
       setPickups(myPickups);
+
+      // If all three completely failed, inform the user
+      if (donationsRes.status === 'rejected' && requestsRes.status === 'rejected' && pickupsRes.status === 'rejected') {
+        toast.error('Failed to load donor dashboard data');
+      }
     } catch (err) {
       toast.error('Failed to load donor dashboard data');
     } finally {
