@@ -157,26 +157,28 @@ export const sendDonationCreatedEmail = async (data: DonationCreatedEmailData): 
 
   const bodyContent = `
     <p>Dear ${data.donorName},</p>
-    <p>Thank you for submitting a surplus food donation! Your listing has been registered on <strong>SmartFoodRescue</strong> and is now visible to verified partner NGOs.</p>
+    <p style="font-size: 15px; font-weight: 600; color: #166534;">
+      Your food donation request has been submitted successfully.
+    </p>
     <div class="card">
-      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId.slice(-6).toUpperCase()}</span></div>
-      <div class="row"><span class="label">Food Item / Type:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId}</span></div>
+      <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
       ${data.foodCategory ? `<div class="row"><span class="label">Category:</span><span class="value">${data.foodCategory}</span></div>` : ''}
       <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
-      <div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>
-      <div class="row"><span class="label">Prepared Time:</span><span class="value">${prepStr}</span></div>
-      <div class="row"><span class="label">Expiry Time:</span><span class="value">${expStr}</span></div>
+      <div class="row"><span class="label">Pickup / Location:</span><span class="value">${data.pickupLocation}</span></div>
       <div class="row"><span class="label">Current Status:</span><span class="value"><span class="badge">${status}</span></span></div>
+      <div class="row"><span class="label">Date / Time:</span><span class="value">${prepStr}</span></div>
+      ${data.expiryTime ? `<div class="row"><span class="label">Expiry Time:</span><span class="value">${expStr}</span></div>` : ''}
     </div>
-    <p>We will notify you immediately via email as soon as a partner NGO requests this donation.</p>
+    <p>We will notify you via email as soon as an NGO accepts your donation request.</p>
   `;
 
-  const html = wrapEmailTemplate('Food Donation Received', bodyContent);
-  const text = `Dear ${data.donorName},\n\nYour food donation (#${data.donationId.slice(-6)}) for "${data.foodType}" (${data.quantity} ${unit}) has been received by SmartFoodRescue. Current status: ${status}. We will notify you once accepted by an NGO.`;
+  const html = wrapEmailTemplate('Food Donation Request Submitted', bodyContent);
+  const text = `Dear ${data.donorName},\n\nYour food donation request has been submitted successfully.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- Pickup/Location: ${data.pickupLocation}\n- Current Status: ${status}\n- Date/Time: ${prepStr}`;
 
   return sendEmailSafe({
     to: data.to,
-    subject: 'Food Donation Received - SmartFoodRescue',
+    subject: 'Food Donation Request Submitted - SmartFoodRescue',
     text,
     html,
   });
@@ -206,26 +208,26 @@ export const sendNgoAcceptanceEmail = async (data: NgoAcceptanceEmailData): Prom
   const bodyContent = `
     <p>Dear ${data.donorName},</p>
     <p style="font-size: 15px; font-weight: 600; color: #166534;">
-      Your food donation has been accepted by ${data.ngoName}. The donation is now being processed for pickup.
+      Your food donation request has been accepted by an NGO and the pickup process has started.
     </p>
     <div class="card">
-      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId.slice(-6).toUpperCase()}</span></div>
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId}</span></div>
+      <div class="row"><span class="label">NGO Name:</span><span class="value">${data.ngoName}</span></div>
       <div class="row"><span class="label">Food Details:</span><span class="value">${data.foodType}</span></div>
       <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
-      <div class="row"><span class="label">Accepted By (NGO):</span><span class="value">${data.ngoName}</span></div>
-      ${data.pickupLocation ? `<div class="row"><span class="label">Pickup Location:</span><span class="value">${data.pickupLocation}</span></div>` : ''}
-      <div class="row"><span class="label">Assigned Volunteer:</span><span class="value">${data.volunteerName ? `${data.volunteerName} ${data.volunteerPhone ? `(${data.volunteerPhone})` : ''}` : 'Assigning in progress...'}</span></div>
+      ${data.pickupLocation ? `<div class="row"><span class="label">Pickup Information:</span><span class="value">${data.pickupLocation}</span></div>` : ''}
+      ${data.volunteerName ? `<div class="row"><span class="label">Assigned Volunteer:</span><span class="value">${data.volunteerName} ${data.volunteerPhone ? `(${data.volunteerPhone})` : ''}</span></div>` : ''}
       <div class="row"><span class="label">Current Status:</span><span class="value"><span class="badge">${status}</span></span></div>
     </div>
     <p>Please keep the surplus food packaged and ready for safe handover. You can monitor the live rescue timeline on your dashboard.</p>
   `;
 
-  const html = wrapEmailTemplate('Your Food Donation Has Been Accepted', bodyContent);
-  const text = `Dear ${data.donorName},\n\nYour food donation has been accepted by ${data.ngoName}. The donation is now being processed for pickup. Donation ID: #${data.donationId.slice(-6)}. Food: ${data.foodType} (${data.quantity} ${unit}). Status: ${status}.`;
+  const html = wrapEmailTemplate('Food Donation Request Accepted', bodyContent);
+  const text = `Dear ${data.donorName},\n\nYour food donation request has been accepted by an NGO and the pickup process has started.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- NGO Name: ${data.ngoName}\n- Food Details: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- Pickup Information: ${data.pickupLocation || 'On file'}\n- Current Status: ${status}`;
 
   return sendEmailSafe({
     to: data.to,
-    subject: 'Your Food Donation Has Been Accepted - SmartFoodRescue',
+    subject: 'Food Donation Request Accepted - SmartFoodRescue',
     text,
     html,
   });
@@ -350,13 +352,13 @@ export const sendRequestPlacedEmail = async (data: RequestPlacedEmailData): Prom
 
 export interface DeliveredEmailData {
   to: string | string[];
-  pickupId: string;
+  donationId: string;
   foodType: string;
   quantity: number | string;
   unit?: string;
   donorName: string;
   ngoName: string;
-  volunteerName: string;
+  volunteerName?: string;
   deliveryDate?: Date | string;
   pickupLocation?: string;
   deliveryLocation?: string;
@@ -367,26 +369,30 @@ export const sendDeliveredEmail = async (data: DeliveredEmailData): Promise<bool
   const deliveryTimeStr = data.deliveryDate ? new Date(data.deliveryDate).toLocaleString() : new Date().toLocaleString();
 
   const bodyContent = `
-    <p>Good news! The surplus food donation has been safely transported and delivered to the recipient NGO.</p>
+    <p>Dear ${data.donorName},</p>
+    <p style="font-size: 15px; font-weight: 600; color: #166534;">
+      Your donated food has been delivered successfully. Thank you for helping reduce food waste and feed people in need.
+    </p>
     <div class="card">
-      <div class="row"><span class="label">Pickup ID:</span><span class="value">#${data.pickupId.slice(-6).toUpperCase()}</span></div>
-      <div class="row"><span class="label">Food Rescued:</span><span class="value">${data.foodType}</span></div>
-      <div class="row"><span class="label">Quantity Delivered:</span><span class="value">${data.quantity} ${unit}</span></div>
-      <div class="row"><span class="label">Donor:</span><span class="value">${data.donorName}</span></div>
-      <div class="row"><span class="label">Receiving NGO:</span><span class="value">${data.ngoName}</span></div>
-      <div class="row"><span class="label">Transported By:</span><span class="value">${data.volunteerName}</span></div>
-      <div class="row"><span class="label">Delivery Status:</span><span class="value"><span class="badge">DELIVERED</span></span></div>
-      <div class="row"><span class="label">Delivery Time:</span><span class="value">${deliveryTimeStr}</span></div>
-      ${data.deliveryLocation ? `<div class="row"><span class="label">NGO Facility:</span><span class="value">${data.deliveryLocation}</span></div>` : ''}
+      <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId}</span></div>
+      <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
+      <div class="row"><span class="label">Quantity:</span><span class="value">${data.quantity} ${unit}</span></div>
+      <div class="row"><span class="label">NGO Name:</span><span class="value">${data.ngoName}</span></div>
+      ${data.volunteerName ? `<div class="row"><span class="label">Volunteer / Pickup Info:</span><span class="value">${data.volunteerName}</span></div>` : ''}
+      <div class="row"><span class="label">Delivery Date / Time:</span><span class="value">${deliveryTimeStr}</span></div>
+      <div class="row"><span class="label">Final Status:</span><span class="value"><span class="badge">DELIVERED</span></span></div>
+      ${data.deliveryLocation ? `<div class="row"><span class="label">Destination Facility:</span><span class="value">${data.deliveryLocation}</span></div>` : ''}
     </div>
-    <p>The NGO can now proceed with community distribution. Thank you for making a tangible difference!</p>
+    <p>Thank you for making a tangible difference in our community!</p>
   `;
 
-  const html = wrapEmailTemplate('Food Delivered Successfully', bodyContent);
+  const html = wrapEmailTemplate('Food Donation Delivered Successfully', bodyContent);
+  const text = `Dear ${data.donorName},\n\nYour donated food has been delivered successfully. Thank you for helping reduce food waste and feed people in need.\n\nDetails:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- NGO Name: ${data.ngoName}\n${data.volunteerName ? `- Volunteer: ${data.volunteerName}\n` : ''}- Delivery Date/Time: ${deliveryTimeStr}\n- Final Status: DELIVERED`;
+
   return sendEmailSafe({
     to: data.to,
     subject: 'Food Donation Delivered Successfully - SmartFoodRescue',
-    text: `SmartFoodRescue: Food (${data.foodType}, ${data.quantity} ${unit}) successfully delivered to ${data.ngoName} by volunteer ${data.volunteerName}. Pickup ID: #${data.pickupId.slice(-6)}`,
+    text,
     html,
   });
 };

@@ -274,7 +274,7 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
 
             await sendDeliveredEmail({
               to: recipients,
-              pickupId: pickup._id.toString(),
+              donationId: don._id.toString(),
               foodType: don.foodType || 'Surplus Food',
               quantity: don.quantity || reqObj?.requestedQuantity || 0,
               unit: don.unit || 'portions',

@@ -145,6 +145,20 @@ async function runVerification() {
     });
     assert(true, 'sendVolunteerStatusEmail for DISTRIBUTED executed safely');
 
+    // D: Dedicated Delivered Email
+    await sendDeliveredEmail({
+      to: donorEmail,
+      donorName: donorUser?.name || 'Verified Donor',
+      donationId: '66a1234567890abcdef12345',
+      foodType: 'Fresh Dal Khichdi & Rotis',
+      quantity: 40,
+      unit: 'meals',
+      ngoName: 'Asha Community Kitchen',
+      volunteerName: 'Vikram Joshi',
+      deliveryDate: new Date()
+    });
+    assert(true, 'sendDeliveredEmail with donor registered email executed safely');
+
     // 5. Complete End-to-End Database Lifecycle Flow
     console.log('\nTesting complete database lifecycle & audit trail in MongoDB Atlas...');
     const donorProfile = await Donor.findOne({ userId: donorUser?._id });
