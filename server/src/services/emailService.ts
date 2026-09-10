@@ -44,7 +44,14 @@ const getTransporter = () => {
 
 export const getFromAddress = () => {
   const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
-  return process.env.EMAIL_FROM || `SmartFoodRescue <${user}>`;
+  const rawFrom = (process.env.EMAIL_FROM || '').trim();
+  if (rawFrom) {
+    if (rawFrom.includes('<') && rawFrom.includes('>')) {
+      return rawFrom;
+    }
+    return `SmartFoodRescue <${rawFrom}>`;
+  }
+  return `SmartFoodRescue <${user}>`;
 };
 
 export const verifyEmailConfig = async (): Promise<boolean> => {

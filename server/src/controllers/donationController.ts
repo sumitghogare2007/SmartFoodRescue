@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import FoodDonation from '../models/FoodDonation';
 import Donor from '../models/Donor';
-import { sendDonationCreatedEmail } from '../services/emailService';
+import User from '../models/User';
+import { sendDonationCreatedEmail, maskEmail } from '../services/emailService';
 import { eventService } from '../services/eventService';
 
 // Mask aadhaar: XXXX-XXXX-1234 (show only last 4 digits)
@@ -54,28 +55,52 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 
 import Location from '../models/Location';
 import FoodItem from '../models/FoodItem';
-import { resolveDonorFromUser } from '../services/recipientService';
+import { resolveDonorFromUser, isValidEmail } from '../services/recipientService';
+
+const maskId = (id?: any): string => {
+  if (!id) return 'unknown';
+  const str = id.toString();
+  if (str.length <= 8) return str;
+  return `${str.slice(0, 4)}...${str.slice(-4)}`;
+};
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // 2. Safe log of authenticated user
+    const rawUserId = req.user?._id ? req.user._id.toString() : 'unknown';
+    console.log(`Authenticated donor user ID: ${maskId(rawUserId)}`);
+
+    const authUser = await User.findById(req.user._id).select('-passwordHash');
+    const userFound = Boolean(authUser);
+    const userEmailExists = Boolean(authUser?.email && authUser.email.trim().length > 0);
+    const maskedAuthEmail = authUser?.email ? maskEmail(authUser.email) : 'none';
+
+    console.log(`Authenticated user found: ${userFound ? 'YES' : 'NO'}`);
+    console.log(`Authenticated user email exists: ${userEmailExists ? 'YES' : 'NO'}`);
+    console.log(`Masked authenticated email: ${maskedAuthEmail}`);
+
+    // 3. Verify User -> Donor relationship
     let donor = await Donor.findOne({ userId: req.user._id });
     if (!donor) {
       const defaultLoc = await Location.findOne();
       donor = new Donor({
         userId: req.user._id,
         donorType: 'Individual',
-        organizationName: req.user?.name || 'Registered Donor',
-        contactName: req.user?.name || 'Registered Donor',
-        contactPhone: req.user?.phone || '9999999999',
-        contactEmail: req.user?.email,
+        organizationName: authUser?.name || 'Registered Donor',
+        contactName: authUser?.name || 'Registered Donor',
+        contactPhone: authUser?.phone || '9999999999',
+        contactEmail: authUser?.email,
         locationId: defaultLoc?._id,
         isVerified: true
       });
       await donor.save();
-    } else if (req.user?.email && donor.contactEmail !== req.user.email) {
-      donor.contactEmail = req.user.email;
+    } else if (authUser?.email && donor.contactEmail !== authUser.email) {
+      donor.contactEmail = authUser.email;
       await donor.save();
     }
+
+    console.log(`User → Donor resolution: ${donor ? 'SUCCESS' : 'FAILED'}`);
+    console.log(`Donor ID: ${maskId(donor?._id)}`);
 
     const {
       foodType,
@@ -136,6 +161,7 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
       finalLocationId = donor.locationId;
     }
 
+    // 4. Create FoodDonation document
     const donation = new FoodDonation({
       donorId: donor._id,
       locationId: finalLocationId,
@@ -165,46 +191,50 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
     });
     await item.save();
 
+    console.log(`FoodDonation created: YES`);
+    console.log(`Donation ID: ${maskId(donation._id)}`);
+    console.log(`Donation donorId: ${maskId(donation.donorId)}`);
+
     const populated = await FoodDonation.findById(donation._id)
       .populate('donorId')
       .populate('locationId');
 
-    // Complete database operation first, then send confirmation email to donor's registered email
-    (async () => {
+    // 5 & 6. Resolve donor's User.email directly from MongoDB and send email
+    const recipientEmail = (authUser?.email || '').trim().toLowerCase();
+    console.log(`Donation email recipient resolved: ${maskEmail(recipientEmail)}`);
+
+    if (recipientEmail && isValidEmail(recipientEmail)) {
+      console.log('Sending donation-created email');
+      const loc = populated?.locationId as any;
+      const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
+      const donorDisplayName = authUser?.name || donor.contactName || donor.organizationName || 'Food Donor';
+
       try {
-        console.log(`[RecipientService] Resolving donor email for donation: ${donation._id}`);
-        console.log(`[RecipientService] Donor resolved: ${donation.donorId}`);
+        const emailSuccess = await sendDonationCreatedEmail({
+          to: recipientEmail,
+          donorName: donorDisplayName,
+          donationId: donation._id.toString(),
+          foodType: donation.foodType,
+          foodCategory: donation.foodCategory,
+          quantity: donation.quantity,
+          unit: donation.unit,
+          pickupLocation: locStr,
+          preparationTime: donation.preparationTime,
+          expiryTime: donation.expiryTime,
+          status: donation.status
+        });
 
-        const resolvedDonor = await resolveDonorFromUser(req.user._id);
-
-        if (resolvedDonor.email) {
-          const loc = populated?.locationId as any;
-          const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
-
-          console.log(`[Donation Controller] Sending confirmation email for donation #${donation._id}`);
-          const emailSuccess = await sendDonationCreatedEmail({
-            to: resolvedDonor.email,
-            donorName: resolvedDonor.donorName,
-            donationId: donation._id.toString(),
-            foodType: donation.foodType,
-            foodCategory: donation.foodCategory,
-            quantity: donation.quantity,
-            unit: donation.unit,
-            pickupLocation: locStr,
-            preparationTime: donation.preparationTime,
-            expiryTime: donation.expiryTime,
-            status: donation.status
-          });
-          if (!emailSuccess) {
-            console.warn(`[Donation Controller] Confirmation email could not be delivered for donation #${donation._id}`);
-          }
+        if (emailSuccess) {
+          console.log('Email send result: SUCCESS');
         } else {
-          console.warn(`[Donation Controller] No verified email found for logged-in user ID: ${req.user?._id}. Skipping email.`);
+          console.log('Email send result: FAILED');
         }
-      } catch (emailErr: any) {
-        console.error(`[Donation Controller] Failed to deliver confirmation email:`, emailErr?.message || emailErr);
+      } catch (sendErr: any) {
+        console.log(`Email send result: FAILED (${sendErr?.message || 'SMTP delivery failed'})`);
       }
-    })();
+    } else {
+      console.log('Email send result: FAILED (No valid authenticated User.email found in MongoDB)');
+    }
 
     // Broadcast real-time update
     eventService.broadcast('donation:created', {
