@@ -274,11 +274,11 @@ const PickupsPage = () => {
                           <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-3">
                             <span className="flex items-center">
                               <Phone className="w-3 h-3 mr-1 text-gray-400" />
-                              {donor?.contactPhone || donorUser?.phone || '9822012345'}
+                              {donorUser?.phone || donor?.contactPhone || 'N/A'}
                             </span>
                             <span className="flex items-center">
                               <Mail className="w-3 h-3 mr-1 text-gray-400" />
-                              {donor?.contactEmail || donorUser?.email || 'donor@smartfoodrescue.com'}
+                              {donorUser?.email || donor?.contactEmail || 'N/A'}
                             </span>
                           </p>
                         </div>

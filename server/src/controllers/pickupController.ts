@@ -7,6 +7,7 @@ import Distribution from '../models/Distribution';
 import Volunteer from '../models/Volunteer';
 import NGO from '../models/NGO';
 import { sendDeliveredEmail, sendVolunteerStatusEmail } from '../services/emailService';
+import { resolveDonorFromPickup } from '../services/recipientService';
 import { eventService } from '../services/eventService';
 
 // Mask aadhaar helper: XXXX-XXXX-1234
@@ -209,51 +210,39 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
     // Trigger email notification for status changes to donor's registered email (asynchronous, non-blocking)
     (async () => {
       try {
-        const fullPickup = await Pickup.findById(pickup._id)
-          .populate({
-            path: 'requestId',
-            populate: [
-              {
-                path: 'donationId',
-                populate: [
-                  { path: 'donorId', populate: ['userId', 'locationId'] },
-                  { path: 'locationId' }
-                ]
-              },
-              {
-                path: 'ngoId',
-                populate: ['userId', 'locationId']
-              }
-            ]
-          })
-          .populate({
-            path: 'volunteerId',
-            populate: { path: 'userId' }
-          });
+        const resolvedDonor = await resolveDonorFromPickup(pickup._id);
 
-        const reqObj = fullPickup?.requestId as any;
-        const don = reqObj?.donationId as any;
-        const donor = don?.donorId as any;
-        const ngo = reqObj?.ngoId as any;
-        const vol = fullPickup?.volunteerId as any;
+        if (resolvedDonor.email) {
+          const fullPickup = await Pickup.findById(pickup._id)
+            .populate({
+              path: 'requestId',
+              populate: [
+                { path: 'donationId', populate: 'locationId' },
+                { path: 'ngoId', populate: ['userId', 'locationId'] }
+              ]
+            })
+            .populate({
+              path: 'volunteerId',
+              populate: { path: 'userId' }
+            });
 
-        const donorEmail = donor?.userId?.email || donor?.contactEmail;
-        const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
-        const volEmail = vol?.userId?.email;
+          const reqObj = fullPickup?.requestId as any;
+          const don = reqObj?.donationId as any;
+          const ngo = reqObj?.ngoId as any;
+          const vol = fullPickup?.volunteerId as any;
 
-        if (donorEmail && don) {
-          const donorLoc = don.locationId as any || donor?.locationId as any;
+          const donorLoc = don?.locationId as any;
           const ngoLoc = ngo?.locationId as any;
           const pickupLocStr = donorLoc ? `${donorLoc.address}, ${donorLoc.area}, ${donorLoc.city}` : 'Donor Address';
           const ngoLocStr = ngoLoc ? `${ngoLoc.address}, ${ngoLoc.area}, ${ngoLoc.city}` : 'NGO Center';
 
           await sendVolunteerStatusEmail({
-            to: donorEmail,
-            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Food Donor',
-            donationId: don._id.toString(),
-            foodType: don.foodType || 'Surplus Food',
-            quantity: don.quantity || reqObj?.requestedQuantity || 0,
-            unit: don.unit || 'portions',
+            to: resolvedDonor.email,
+            donorName: resolvedDonor.donorName,
+            donationId: don?._id ? don._id.toString() : pickup._id.toString(),
+            foodType: don?.foodType || 'Surplus Food',
+            quantity: don?.quantity || reqObj?.requestedQuantity || 0,
+            unit: don?.unit || 'portions',
             ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
             volunteerName: vol?.userId?.name || 'Fleet Volunteer',
             volunteerPhone: vol?.userId?.phone,
@@ -262,25 +251,16 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
             deliveryLocation: ngoLocStr,
             notes: note
           });
-        }
 
-        if (status === 'DELIVERED') {
-          if (donorEmail && don) {
-            const donorLoc = don.locationId as any || donor?.locationId as any;
-            const ngoLoc = ngo?.locationId as any;
-            const pickupLocStr = donorLoc ? `${donorLoc.address}, ${donorLoc.area}, ${donorLoc.city}` : 'Donor Address';
-            const ngoLocStr = ngoLoc ? `${ngoLoc.address}, ${ngoLoc.area}, ${ngoLoc.city}` : 'NGO Center';
-
-            const donorDisplayName = donor?.userId?.name || donor?.contactName || donor?.organizationName || 'Food Donor';
-
+          if (status === 'DELIVERED') {
             // Send primary Delivered email to the registered donor
             await sendDeliveredEmail({
-              to: donorEmail,
-              donationId: don._id.toString(),
-              foodType: don.foodType || 'Surplus Food',
-              quantity: don.quantity || reqObj?.requestedQuantity || 0,
-              unit: don.unit || 'portions',
-              donorName: donorDisplayName,
+              to: resolvedDonor.email,
+              donationId: don?._id ? don._id.toString() : pickup._id.toString(),
+              foodType: don?.foodType || 'Surplus Food',
+              quantity: don?.quantity || reqObj?.requestedQuantity || 0,
+              unit: don?.unit || 'portions',
+              donorName: resolvedDonor.donorName,
               ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
               volunteerName: vol?.userId?.name || 'Assigned Volunteer',
               deliveryDate: new Date(),
@@ -288,15 +268,16 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
               deliveryLocation: ngoLocStr,
             });
 
+            const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
             // Also notify NGO if distinct registered email
-            if (ngoEmail && ngoEmail !== donorEmail) {
+            if (ngoEmail && ngoEmail !== resolvedDonor.email) {
               await sendDeliveredEmail({
                 to: ngoEmail,
-                donationId: don._id.toString(),
-                foodType: don.foodType || 'Surplus Food',
-                quantity: don.quantity || reqObj?.requestedQuantity || 0,
-                unit: don.unit || 'portions',
-                donorName: donorDisplayName,
+                donationId: don?._id ? don._id.toString() : pickup._id.toString(),
+                foodType: don?.foodType || 'Surplus Food',
+                quantity: don?.quantity || reqObj?.requestedQuantity || 0,
+                unit: don?.unit || 'portions',
+                donorName: resolvedDonor.donorName,
                 ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
                 volunteerName: vol?.userId?.name || 'Assigned Volunteer',
                 deliveryDate: new Date(),
@@ -305,6 +286,8 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
               });
             }
           }
+        } else {
+          console.warn(`[Pickup Controller] No verified donor email found for pickup #${pickup._id}. Skipping email.`);
         }
       } catch (err: any) {
         console.error('[EmailService] Error preparing status change email:', err?.message || err);
@@ -369,40 +352,42 @@ export const assignVolunteer = async (req: Request, res: Response, next: NextFun
     // Trigger email notification for assignment
     (async () => {
       try {
-        const fullPickup = await Pickup.findById(pickup._id)
-          .populate({
-            path: 'requestId',
-            populate: [
-              { path: 'donationId', populate: [{ path: 'donorId', populate: ['userId', 'locationId'] }] },
-              { path: 'ngoId', populate: 'userId' }
-            ]
-          })
-          .populate({
-            path: 'volunteerId',
-            populate: { path: 'userId' }
-          });
+        const resolvedDonor = await resolveDonorFromPickup(pickup._id);
 
-        const reqObj = fullPickup?.requestId as any;
-        const don = reqObj?.donationId as any;
-        const donor = don?.donorId as any;
-        const ngo = reqObj?.ngoId as any;
-        const vol = fullPickup?.volunteerId as any;
+        if (resolvedDonor.email) {
+          const fullPickup = await Pickup.findById(pickup._id)
+            .populate({
+              path: 'requestId',
+              populate: [
+                { path: 'donationId' },
+                { path: 'ngoId', populate: 'userId' }
+              ]
+            })
+            .populate({
+              path: 'volunteerId',
+              populate: { path: 'userId' }
+            });
 
-        const donorEmail = donor?.userId?.email || donor?.contactEmail;
-        if (donorEmail && don) {
+          const reqObj = fullPickup?.requestId as any;
+          const don = reqObj?.donationId as any;
+          const ngo = reqObj?.ngoId as any;
+          const vol = fullPickup?.volunteerId as any;
+
           await sendVolunteerStatusEmail({
-            to: donorEmail,
-            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Food Donor',
-            donationId: don._id.toString(),
-            foodType: don.foodType || 'Surplus Food',
-            quantity: don.quantity || reqObj?.requestedQuantity || 0,
-            unit: don.unit || 'portions',
+            to: resolvedDonor.email,
+            donorName: resolvedDonor.donorName,
+            donationId: don?._id ? don._id.toString() : pickup._id.toString(),
+            foodType: don?.foodType || 'Surplus Food',
+            quantity: don?.quantity || reqObj?.requestedQuantity || 0,
+            unit: don?.unit || 'portions',
             ngoName: ngo?.ngoName || ngo?.userId?.name || 'NGO Partner',
             volunteerName: vol?.userId?.name || 'Assigned Volunteer',
             volunteerPhone: vol?.userId?.phone,
             status: 'ASSIGNED',
             notes: note
           });
+        } else {
+          console.warn(`[Pickup Controller] No verified donor email found for pickup #${pickup._id}. Skipping email.`);
         }
       } catch (err: any) {
         console.error('[EmailService] Error sending volunteer assignment email:', err?.message || err);

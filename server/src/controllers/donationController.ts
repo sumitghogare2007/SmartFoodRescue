@@ -54,6 +54,7 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 
 import Location from '../models/Location';
 import FoodItem from '../models/FoodItem';
+import { resolveDonorFromUser } from '../services/recipientService';
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -70,6 +71,9 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
         locationId: defaultLoc?._id,
         isVerified: true
       });
+      await donor.save();
+    } else if (req.user?.email && donor.contactEmail !== req.user.email) {
+      donor.contactEmail = req.user.email;
       await donor.save();
     }
 
@@ -165,17 +169,22 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
       .populate('donorId')
       .populate('locationId');
 
-    // Asynchronously send confirmation email to donor's registered MongoDB email
+    // Complete database operation first, then send confirmation email to donor's registered email
     (async () => {
       try {
-        const donorEmail = req.user?.email || (donor as any).contactEmail;
-        if (donorEmail) {
+        console.log(`[RecipientService] Resolving donor email for donation: ${donation._id}`);
+        console.log(`[RecipientService] Donor resolved: ${donation.donorId}`);
+
+        const resolvedDonor = await resolveDonorFromUser(req.user._id);
+
+        if (resolvedDonor.email) {
           const loc = populated?.locationId as any;
           const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
-          const donorDisplayName = req.user?.name || donor.contactName || donor.organizationName || 'Food Donor';
-          await sendDonationCreatedEmail({
-            to: donorEmail,
-            donorName: donorDisplayName,
+
+          console.log(`[Donation Controller] Sending confirmation email for donation #${donation._id}`);
+          const emailSuccess = await sendDonationCreatedEmail({
+            to: resolvedDonor.email,
+            donorName: resolvedDonor.donorName,
             donationId: donation._id.toString(),
             foodType: donation.foodType,
             foodCategory: donation.foodCategory,
@@ -186,9 +195,14 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
             expiryTime: donation.expiryTime,
             status: donation.status
           });
+          if (!emailSuccess) {
+            console.warn(`[Donation Controller] Confirmation email could not be delivered for donation #${donation._id}`);
+          }
+        } else {
+          console.warn(`[Donation Controller] No verified email found for logged-in user ID: ${req.user?._id}. Skipping email.`);
         }
-      } catch (err: any) {
-        console.error('[EmailService] Error preparing donation created email:', err?.message || err);
+      } catch (emailErr: any) {
+        console.error(`[Donation Controller] Failed to deliver confirmation email:`, emailErr?.message || emailErr);
       }
     })();
 

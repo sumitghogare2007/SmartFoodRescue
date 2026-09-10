@@ -11,7 +11,8 @@
     "test:flow": "ts-node scripts/test-database-flow.ts",
     "test:e2e": "ts-node scripts/test-api-e2e.ts",
     "verify:atlas": "ts-node scripts/verify-atlas-users.ts",
-    "test:prod-reg": "ts-node scripts/test-registration-prod.ts"
+    "test:prod-reg": "ts-node scripts/test-registration-prod.ts",
+    "test:smtp": "ts-node scripts/test-real-smtp-lifecycle.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

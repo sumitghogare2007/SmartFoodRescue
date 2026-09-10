@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { Transporter } from 'nodemailer';
 
 export const maskEmail = (email: string): string => {
   if (!email || !email.includes('@')) return email || 'unknown';
@@ -11,30 +11,45 @@ export const maskEmail = (email: string): string => {
   return `${start}***${end}@${domain}`;
 };
 
+let cachedTransporter: Transporter | null = null;
+
 const getTransporter = () => {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '') : '';
+  const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
+  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
 
   if (!user || !pass) {
+    console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing).');
     return null;
   }
 
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user,
-      pass,
-    },
-  });
+  if (!cachedTransporter) {
+    console.log('[EmailService] SMTP configuration detected');
+    cachedTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user,
+        pass,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
+    });
+  }
+
+  return cachedTransporter;
 };
 
 export const getFromAddress = () => {
-  return process.env.EMAIL_FROM || `SmartFoodRescue <${process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com'}>`;
+  const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
+  return process.env.EMAIL_FROM || `SmartFoodRescue <${user}>`;
 };
 
 export const verifyEmailConfig = async (): Promise<boolean> => {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '') : '';
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
 
   if (!user || !pass) {
     console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing). Emails will be skipped safely.');
@@ -45,10 +60,10 @@ export const verifyEmailConfig = async (): Promise<boolean> => {
     const transporter = getTransporter();
     if (!transporter) return false;
     await transporter.verify();
-    console.log(`[EmailService] SMTP configuration verified successfully (User: ${maskEmail(user)})`);
+    console.log(`[EmailService] SMTP connection verified (Sender: ${maskEmail(user)})`);
     return true;
   } catch (error: any) {
-    console.error(`[EmailService] SMTP configuration verification failed: ${error?.message || error}`);
+    console.error(`[EmailService] SMTP verification failed: ${error?.message || error}`);
     return false;
   }
 };
@@ -104,12 +119,10 @@ export const sendEmailSafe = async (options: {
   try {
     const transporter = getTransporter();
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
-    // Filter out invalid/empty and strictly exclude sender address from being a recipient
-    const senderEmail = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').toLowerCase().trim();
     const validRecipients = Array.from(
       new Set(
         recipients
-          .map(r => (r || '').trim())
+          .map(r => (r || '').trim().toLowerCase())
           .filter(r => r && r.includes('@'))
       )
     );
@@ -121,28 +134,30 @@ export const sendEmailSafe = async (options: {
 
     const maskedRecipients = validRecipients.map(maskEmail).join(', ');
     const notifType = options.notificationType || 'NOTIFICATION';
+    const fromAddr = getFromAddress();
 
-    console.log(`[EmailService] Email send started`);
-    console.log(`[EmailService] Notification type: ${notifType}`);
-    console.log(`[EmailService] Recipient: ${maskedRecipients}`);
+    console.log('[EmailService] Sending donation notification');
+    console.log(`[EmailService] Sending [${notifType}] "${options.subject}"`);
+    console.log(`[EmailService] From: ${fromAddr} -> To: ${maskedRecipients}`);
 
     if (!transporter) {
-      console.log(`[EmailService] [Notice] Transporter not configured. Email preview: "${options.subject}" to: ${maskedRecipients}`);
+      console.warn(`[EmailService] Transporter not configured. Email skipped for: ${maskedRecipients}`);
       return false;
     }
 
-    await transporter.sendMail({
-      from: getFromAddress(),
+    const info = await transporter.sendMail({
+      from: fromAddr,
       to: validRecipients.join(', '),
       subject: options.subject,
       text: options.text,
       html: options.html,
     });
 
-    console.log(`[EmailService] Email sent successfully to: ${maskedRecipients}`);
+    console.log('[EmailService] Email sent successfully');
+    console.log(`[EmailService] Email successfully delivered to: ${maskedRecipients} (MessageId: ${info.messageId})`);
     return true;
   } catch (error: any) {
-    console.error(`[EmailService] Email sending failed: ${error?.message || error}`);
+    console.error(`[EmailService] Email send failed: ${error?.message || error}`);
     return false;
   }
 };
@@ -171,9 +186,8 @@ export const sendDonationCreatedEmail = async (data: DonationCreatedEmailData): 
   const bodyContent = `
     <p>Hello ${data.donorName},</p>
     <p style="font-size: 15px; font-weight: 600; color: #166534;">
-      Your food donation request has been submitted successfully.
+      Your food donation request has been successfully submitted to the NGO. Please wait while the NGO reviews and accepts your request.
     </p>
-    <p>Your request is now waiting for an NGO to accept it.</p>
     <div class="card">
       <div class="row"><span class="label">Donation ID:</span><span class="value">#${data.donationId}</span></div>
       <div class="row"><span class="label">Food Type:</span><span class="value">${data.foodType}</span></div>
@@ -187,7 +201,7 @@ export const sendDonationCreatedEmail = async (data: DonationCreatedEmailData): 
   `;
 
   const html = wrapEmailTemplate('Food Donation Request Submitted', bodyContent);
-  const text = `Hello ${data.donorName},\n\nYour food donation request has been submitted successfully.\n\nYour request is now waiting for an NGO to accept it.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- Location: ${data.pickupLocation}\n- Status: Waiting for NGO Acceptance\n\nThank you for helping reduce food waste and support people in need.\n\nSmartFoodRescue Team`;
+  const text = `Hello ${data.donorName},\n\nYour food donation request has been successfully submitted to the NGO. Please wait while the NGO reviews and accepts your request.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- Location: ${data.pickupLocation}\n- Status: Waiting for NGO Acceptance\n\nThank you for helping reduce food waste and support people in need.\n\nSmartFoodRescue Team`;
 
   return sendEmailSafe({
     to: data.to,
@@ -275,7 +289,7 @@ export const sendVolunteerStatusEmail = async (data: VolunteerStatusEmailData): 
   let statusDescription = `Your food donation status has changed to ${data.status}.`;
 
   if (data.status === 'ASSIGNED') {
-    subject = 'Volunteer Assigned for Food Pickup - SmartFoodRescue';
+    subject = 'Food Pickup Assigned - SmartFoodRescue';
     title = 'Volunteer Assigned for Pickup';
     statusDescription = `A volunteer (${data.volunteerName || 'Fleet Volunteer'}) has been assigned to pick up your food donation for ${data.ngoName}.`;
   } else if (data.status === 'RECEIVED') {
@@ -398,12 +412,12 @@ export const sendDeliveredEmail = async (data: DeliveredEmailData): Promise<bool
       <div class="row"><span class="label">Delivery Date:</span><span class="value">${deliveryTimeStr}</span></div>
       ${data.volunteerName ? `<div class="row"><span class="label">Volunteer / Pickup Info:</span><span class="value">${data.volunteerName}</span></div>` : ''}
     </div>
-    <p>Thank you for helping reduce food waste and provide food to people in need.</p>
+    <p>Thank you for helping reduce food waste and support people in need.</p>
     <p style="margin-top: 16px; font-weight: 600; color: #166534;">SmartFoodRescue Team</p>
   `;
 
   const html = wrapEmailTemplate('Food Donation Delivered Successfully', bodyContent);
-  const text = `Hello ${data.donorName},\n\nYour donated food has been delivered successfully.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- NGO: ${data.ngoName}\n- Status: Delivered Successfully\n- Delivery Date: ${deliveryTimeStr}\n\nThank you for helping reduce food waste and provide food to people in need.\n\nSmartFoodRescue Team`;
+  const text = `Hello ${data.donorName},\n\nYour donated food has been delivered successfully.\n\nDonation Details:\n- Donation ID: ${data.donationId}\n- Food Type: ${data.foodType}\n- Quantity: ${data.quantity} ${unit}\n- NGO: ${data.ngoName}\n- Status: Delivered Successfully\n- Delivery Date: ${deliveryTimeStr}\n\nThank you for helping reduce food waste and support people in need.\n\nSmartFoodRescue Team`;
 
   return sendEmailSafe({
     to: data.to,

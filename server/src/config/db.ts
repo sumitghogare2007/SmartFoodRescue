@@ -20,8 +20,8 @@ export const connectDB = async (): Promise<void> => {
     if (process.env.NODE_ENV !== 'production' && isAtlas) {
       console.warn(`[MongoDB] Atlas connection failed (${error.message}). Falling back to local MongoDB...`);
       try {
-        await mongoose.connect('mongodb://127.0.0.1:27017/SmartFoodRescue');
-        console.log(`MongoDB connected successfully (Local Community Server: SmartFoodRescue) -> Database: ${mongoose.connection.db?.databaseName}`);
+        await mongoose.connect('mongodb://127.0.0.1:27017/smartfoodrescue');
+        console.log(`MongoDB connected successfully (Local Community Server: smartfoodrescue) -> Database: ${mongoose.connection.db?.databaseName}`);
         return;
       } catch (localErr: any) {
         console.error('Local fallback failed:', localErr.message);

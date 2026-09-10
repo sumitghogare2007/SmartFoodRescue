@@ -7,6 +7,7 @@ import FoodDonation from '../models/FoodDonation';
 import PickupTracking from '../models/PickupTracking';
 import NGO from '../models/NGO';
 import { sendDistributedEmail } from '../services/emailService';
+import { resolveDonorFromPickup } from '../services/recipientService';
 import { eventService } from '../services/eventService';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
@@ -130,21 +131,22 @@ export const complete = async (req: Request, res: Response, next: NextFunction) 
     // Trigger email notification for food distributed (asynchronous, non-blocking)
     (async () => {
       try {
+        const resolvedDonor = await resolveDonorFromPickup(pickup._id);
+
         const fullPickup = await Pickup.findById(pickup._id)
           .populate({
             path: 'requestId',
             populate: [
-              { path: 'donationId', populate: [{ path: 'donorId', populate: 'userId' }] },
+              { path: 'donationId' },
               { path: 'ngoId', populate: 'userId' }
             ]
           });
 
         const reqObj = fullPickup?.requestId as any;
         const don = reqObj?.donationId as any;
-        const donor = don?.donorId as any;
         const ngo = reqObj?.ngoId as any;
 
-        const donorEmail = donor?.contactEmail || donor?.userId?.email;
+        const donorEmail = resolvedDonor.email;
         const ngoEmail = ngo?.contactEmail || ngo?.userId?.email;
 
         const recipients = Array.from(new Set([donorEmail, ngoEmail].filter(Boolean) as string[]));

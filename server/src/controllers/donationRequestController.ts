@@ -8,6 +8,7 @@ import PickupTracking from '../models/PickupTracking';
 import Donor from '../models/Donor';
 import Location from '../models/Location';
 import { sendNgoAcceptanceEmail, sendRequestPlacedEmail } from '../services/emailService';
+import { resolveDonorFromDonation } from '../services/recipientService';
 import { eventService } from '../services/eventService';
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
@@ -119,33 +120,32 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
     // Trigger email notification for NGO acceptance to donor's registered email (asynchronous, non-blocking)
     (async () => {
       try {
-        const fullDonation = await FoodDonation.findById(donation._id)
-          .populate({ path: 'donorId', populate: ['userId', 'locationId'] })
-          .populate('locationId');
-        const fullNgo = await NGO.findById(ngo._id).populate('userId');
+        const resolvedDonor = await resolveDonorFromDonation(donation._id);
 
-        const donor = fullDonation?.donorId as any;
-        const donorEmail = donor?.userId?.email || donor?.contactEmail;
+        if (resolvedDonor.email) {
+          const fullDonation = await FoodDonation.findById(donation._id).populate('locationId');
+          const fullNgo = await NGO.findById(ngo._id).populate('userId');
 
-        if (donorEmail && fullDonation) {
-          const loc = (fullDonation.locationId as any) || (donor?.locationId as any);
+          const loc = (fullDonation?.locationId as any);
           const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
           const ngoName = fullNgo?.ngoName || (fullNgo?.userId as any)?.name || 'Partner NGO';
 
           await sendNgoAcceptanceEmail({
-            to: donorEmail,
-            donorName: donor?.organizationName || donor?.contactName || donor?.userId?.name || 'Valued Donor',
+            to: resolvedDonor.email,
+            donorName: resolvedDonor.donorName,
             donationId: donation._id.toString(),
-            foodType: fullDonation.foodType,
+            foodType: donation.foodType,
             quantity: request.requestedQuantity,
-            unit: fullDonation.unit,
+            unit: donation.unit,
             ngoName,
             pickupLocation: locStr,
             status: 'REQUESTED'
           });
+        } else {
+          console.warn(`[DonationRequest Controller] No verified donor email found for donation #${donation._id}. Skipping email.`);
         }
       } catch (err: any) {
-        console.error('[EmailService] Error preparing NGO acceptance email:', err?.message || err);
+        console.error('[EmailService] Error preparing NGO request email:', err?.message || err);
       }
     })();
 
@@ -214,34 +214,32 @@ export const accept = async (req: Request, res: Response, next: NextFunction) =>
     // Trigger update email to donor with volunteer details (asynchronous, non-blocking)
     (async () => {
       try {
-        const fullDonation = await FoodDonation.findById(request.donationId)
-          .populate({ path: 'donorId', populate: ['userId', 'locationId'] })
-          .populate('locationId');
-        const fullNgo = await NGO.findById(request.ngoId).populate('userId');
-        const fullVol = volunteer ? await Volunteer.findById(volunteer._id).populate('userId') : null;
+        const resolvedDonor = await resolveDonorFromDonation(request.donationId);
 
-        const donor = fullDonation?.donorId as any;
-        const donorEmail = donor?.userId?.email || donor?.contactEmail;
+        if (resolvedDonor.email) {
+          const fullDonation = await FoodDonation.findById(request.donationId).populate('locationId');
+          const fullNgo = await NGO.findById(request.ngoId).populate('userId');
+          const fullVol = volunteer ? await Volunteer.findById(volunteer._id).populate('userId') : null;
 
-        if (donorEmail && fullDonation) {
-          const loc = (fullDonation.locationId as any) || (donor?.locationId as any);
+          const loc = (fullDonation?.locationId as any);
           const locStr = loc ? `${loc.address}, ${loc.area}, ${loc.city}` : 'Donor Address on file';
           const volUser = (fullVol as any)?.userId;
 
-          const donorDisplayName = donor?.userId?.name || donor?.contactName || donor?.organizationName || 'Valued Donor';
           await sendNgoAcceptanceEmail({
-            to: donorEmail,
-            donorName: donorDisplayName,
-            donationId: fullDonation._id.toString(),
-            foodType: fullDonation.foodType,
+            to: resolvedDonor.email,
+            donorName: resolvedDonor.donorName,
+            donationId: request.donationId.toString(),
+            foodType: fullDonation?.foodType || 'Surplus Food',
             quantity: request.requestedQuantity,
-            unit: fullDonation.unit,
+            unit: fullDonation?.unit || 'portions',
             ngoName: fullNgo?.ngoName || (fullNgo?.userId as any)?.name || 'Partner NGO',
             pickupLocation: locStr,
             volunteerName: volUser?.name,
             volunteerPhone: volUser?.phone,
             status: 'ACCEPTED'
           });
+        } else {
+          console.warn(`[DonationRequest Controller] No verified donor email found for donation #${request.donationId}. Skipping email.`);
         }
       } catch (err: any) {
         console.error('[EmailService] Error preparing request acceptance email:', err?.message || err);
