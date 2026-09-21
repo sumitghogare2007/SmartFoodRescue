@@ -221,9 +221,9 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       // - no token generated
       // - no DB changes
       // - no email sent
-      // - generic 200 response
-      console.log(`[PasswordReset] No matching user found for email: ${masked}. Returning generic response without action.`);
-      return res.status(200).json(genericResponse);
+      // - return message that no user exists
+      console.log(`[PasswordReset] No user exists for email: ${masked}. Returning 404.`);
+      return res.status(404).json({ message: 'No user exists with this email address.' });
     }
 
     // Step 2: Email exists -> generate secure 32-byte token and SHA-256 hash
@@ -251,7 +251,9 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       console.error(`[PasswordReset] Failed to send password reset email to ${masked}: ${sanitizeError(emailErr)}`);
     });
 
-    return res.status(200).json(genericResponse);
+    return res.status(200).json({
+      message: 'Password reset link has been sent to your email.'
+    });
   } catch (error) {
     console.error('[PasswordReset] Error processing forgot password request:', sanitizeError(error));
     // Never expose internal database or API errors to frontend

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Mail, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from '../../components/ui/Logo';
 import { apiClient } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -9,9 +9,11 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -23,9 +25,10 @@ const ForgotPassword = () => {
     try {
       await apiClient.post('/api/auth/forgot-password', { email: cleanEmail });
       setSubmitted(true);
-      toast.success('Reset link requested');
+      toast.success('Password reset link sent to your email');
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Unable to process your request. Please try again.';
+      setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -81,6 +84,23 @@ const ForgotPassword = () => {
             </div>
           ) : (
             <form className="space-y-6" onSubmit={handleSubmit}>
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 flex items-start">
+                  <AlertCircle className="w-5 h-5 mr-2 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">{errorMessage}</p>
+                    {errorMessage.toLowerCase().includes('no user exists') && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Don't have an account yet?{' '}
+                        <Link to="/auth/register" className="font-semibold underline hover:text-red-800">
+                          Register here
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Email address
@@ -93,7 +113,10 @@ const ForgotPassword = () => {
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errorMessage) setErrorMessage('');
+                    }}
                     placeholder="you@example.com"
                     className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
                   />
