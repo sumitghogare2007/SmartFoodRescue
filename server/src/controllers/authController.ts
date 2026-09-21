@@ -5,6 +5,8 @@ import Donor from '../models/Donor';
 import NGO from '../models/NGO';
 import Volunteer from '../models/Volunteer';
 import Location from '../models/Location';
+import crypto from 'crypto';
+import { maskEmail, sanitizeError, sendPasswordResetEmail } from '../services/emailService';
 
 const generateToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_SECRET as string, {
@@ -191,3 +193,120 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return res.status(400).json({ message: 'A valid email address is required' });
+    }
+
+    const masked = maskEmail(cleanEmail);
+    console.log(`[PasswordReset] Forgot password request received for: ${masked}`);
+
+    // Generic response message returned to prevent account enumeration
+    const genericResponse = {
+      message: 'If an account exists with this email, a password reset link has been sent.'
+    };
+
+    // Step 1: Check users collection before doing anything
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+
+    if (!user) {
+      // If email does NOT exist:
+      // - no token generated
+      // - no DB changes
+      // - no email sent
+      // - generic 200 response
+      console.log(`[PasswordReset] No matching user found for email: ${masked}. Returning generic response without action.`);
+      return res.status(200).json(genericResponse);
+    }
+
+    // Step 2: Email exists -> generate secure 32-byte token and SHA-256 hash
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes expiry
+
+    // Store ONLY SHA-256 hash in MongoDB (never raw token)
+    user.passwordResetTokenHash = tokenHash;
+    user.passwordResetExpires = expiresAt;
+    await user.save();
+
+    // Construct reset URL pointing to ${FRONTEND_URL}/auth/reset-password?token=${rawToken}
+    const rawFrontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+    const resetUrl = `${rawFrontendUrl}/auth/reset-password?token=${rawToken}`;
+
+    console.log(`[PasswordReset] Token hash and 30m expiry saved to database for: ${masked}`);
+
+    // Dispatch email via Gmail API OAuth 2.0 (errors safely caught and never exposed to client)
+    sendPasswordResetEmail({
+      to: user.email,
+      resetUrl,
+      userName: user.name
+    }).catch((emailErr) => {
+      console.error(`[PasswordReset] Failed to send password reset email to ${masked}: ${sanitizeError(emailErr)}`);
+    });
+
+    return res.status(200).json(genericResponse);
+  } catch (error) {
+    console.error('[PasswordReset] Error processing forgot password request:', sanitizeError(error));
+    // Never expose internal database or API errors to frontend
+    res.status(500).json({ message: 'An error occurred while processing your request. Please try again later.' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ message: 'Invalid or missing password reset token.' });
+    }
+
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ message: 'New password is required.' });
+    }
+
+    if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+    }
+
+    // Hash the incoming raw token using SHA-256 to compare against stored hash
+    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      console.warn('[PasswordReset] Reset password attempt rejected: invalid or expired token hash.');
+      return res.status(400).json({ message: 'Invalid or expired password reset link. Please request a new one.' });
+    }
+
+    // Existing User pre-save bcrypt hook hashes user.passwordHash when modified
+    user.passwordHash = newPassword;
+    // Use null to clear passwordResetTokenHash and passwordResetExpires
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    await user.save();
+
+    console.log(`[PasswordReset] Password successfully reset for user: ${maskEmail(user.email)}`);
+
+    return res.status(200).json({
+      message: 'Password has been reset successfully. You can now log in with your new password.'
+    });
+  } catch (error) {
+    console.error('[PasswordReset] Error resetting password:', sanitizeError(error));
+    res.status(500).json({ message: 'An error occurred while resetting your password. Please try again later.' });
+  }
+};
+

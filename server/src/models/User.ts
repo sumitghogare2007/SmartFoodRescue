@@ -7,6 +7,8 @@ export interface IUser extends Document {
   phone: string;
   passwordHash: string;
   userType: 'ADMIN' | 'DONOR' | 'NGO' | 'VOLUNTEER';
+  passwordResetTokenHash?: string | null;
+  passwordResetExpires?: Date | null;
   comparePassword(password: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -17,7 +19,9 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true, trim: true, lowercase: true },
   phone: { type: String, required: true },
   passwordHash: { type: String, required: true },
-  userType: { type: String, enum: ['ADMIN', 'DONOR', 'NGO', 'VOLUNTEER'], required: true }
+  userType: { type: String, enum: ['ADMIN', 'DONOR', 'NGO', 'VOLUNTEER'], required: true },
+  passwordResetTokenHash: { type: String, default: null },
+  passwordResetExpires: { type: Date, default: null }
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

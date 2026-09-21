@@ -218,7 +218,14 @@ export const verifyEmailConfig = async (): Promise<boolean> => {
     return true;
   }
 
-  // Fallback to SMTP verify if Gmail API is not configured (e.g. offline dev)
+  // In production, SMTP fallback is strictly disabled per requirement
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('[EmailService] In production, Gmail API OAuth 2.0 is required. SMTP fallback is disabled.');
+    lastVerificationResult = 'FAILED (Gmail API OAuth required in production)';
+    return false;
+  }
+
+  // Fallback to SMTP verify only in non-production environments (e.g. offline dev)
   const { user, pass } = getSmtpCredentials();
   if (!user || !pass) {
     console.warn('[EmailService] No email provider configured (missing GMAIL_CLIENT_ID / GMAIL_REFRESH_TOKEN and SMTP credentials). Emails will be skipped safely.');
@@ -358,7 +365,15 @@ export const sendEmailSafe = async (options: {
       return true;
     }
 
-    // 2. Fallback: SMTP transport
+    // In production, SMTP fallback is strictly disabled per requirement
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`[EmailService] SMTP fallback is disabled in production. Gmail API OAuth 2.0 is required. Email skipped for: ${maskedRecipients}`);
+      lastSendResult = 'FAILED (SMTP fallback disabled in production)';
+      console.log('Email send result: FAILED');
+      return false;
+    }
+
+    // 2. Fallback: SMTP transport (only non-production environments)
     if (!activeTransporter) {
       activeTransporter = createTransporterForConfig(activeConfig);
     }
@@ -700,3 +715,51 @@ export const sendDistributedEmail = async (data: DistributedEmailData): Promise<
     notificationType: 'DISTRIBUTED'
   });
 };
+
+export interface PasswordResetEmailData {
+  to: string;
+  resetUrl: string;
+  userName?: string;
+}
+
+export const sendPasswordResetEmail = async (data: PasswordResetEmailData): Promise<boolean> => {
+  const cleanEmail = (data.to || '').trim().toLowerCase();
+  const maskedTo = maskEmail(cleanEmail);
+  const name = data.userName || 'User';
+
+  console.log(`[PasswordReset] Preparing password reset email for: ${maskedTo}`);
+
+  const bodyContent = `
+    <p>Hello ${name},</p>
+    <p>We received a request to reset the password for your SmartFoodRescue account associated with <strong>${maskedTo}</strong>.</p>
+    <p>Click the button below to set a new password. This link will remain active for <strong>30 minutes</strong>:</p>
+    <div style="text-align: center; margin: 28px 0;">
+      <a href="${data.resetUrl}" style="background-color: #166534; color: #ffffff; padding: 12px 28px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; display: inline-block;">
+        Reset Password
+      </a>
+    </div>
+    <div class="card">
+      <p style="margin: 0; font-size: 13px; color: #64748b;">
+        If the button above does not work, copy and paste this link into your browser:
+      </p>
+      <p style="margin: 6px 0 0 0; word-break: break-all; font-size: 12px; color: #166534;">
+        ${data.resetUrl}
+      </p>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-top: 20px;">
+      If you did not request a password reset, you can safely ignore this email. Your account password will remain unchanged.
+    </p>
+  `;
+
+  const html = wrapEmailTemplate('Reset Your SmartFoodRescue Password', bodyContent);
+  const text = `Hello ${name},\n\nWe received a request to reset your SmartFoodRescue account password.\n\nPlease use the following link to reset your password (valid for 30 minutes):\n${data.resetUrl}\n\nIf you did not request this, please ignore this email.\n\nSmartFoodRescue Team`;
+
+  return sendEmailSafe({
+    to: cleanEmail,
+    subject: 'Reset Your SmartFoodRescue Password',
+    text,
+    html,
+    notificationType: 'PASSWORD_RESET'
+  });
+};
+
