@@ -1,3 +1,4 @@
+import { Resend } from 'resend';
 import nodemailer, { Transporter } from 'nodemailer';
 
 export const maskEmail = (email: string): string => {
@@ -20,13 +21,37 @@ export interface SmtpTransportConfig {
 
 export const sanitizeError = (err: any): string => {
   if (!err) return 'Unknown error';
-  const msg = typeof err === 'string' ? err : (err.message || err.code || String(err));
-  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : '';
+  const msg = typeof err === 'string' ? err : (err.message || err.name || err.code || JSON.stringify(err));
+  const resendKey = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : '';
+  const emailPass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : '';
   const mongoUri = process.env.MONGODB_URI ? process.env.MONGODB_URI.trim() : '';
+  const jwtSecret = process.env.JWT_SECRET ? process.env.JWT_SECRET.trim() : '';
+
   let safe = msg;
-  if (pass && pass.length > 3) safe = safe.split(pass).join('[REDACTED]');
-  if (mongoUri && mongoUri.length > 5) safe = safe.split(mongoUri).join('[REDACTED]');
+  if (resendKey && resendKey.length > 5) safe = safe.split(resendKey).join('[REDACTED_API_KEY]');
+  if (emailPass && emailPass.length > 3) safe = safe.split(emailPass).join('[REDACTED_PASSWORD]');
+  if (mongoUri && mongoUri.length > 5) safe = safe.split(mongoUri).join('[REDACTED_URI]');
+  if (jwtSecret && jwtSecret.length > 3) safe = safe.split(jwtSecret).join('[REDACTED_SECRET]');
   return safe;
+};
+
+// Resend Client Initialization (reads key only from process.env.RESEND_API_KEY)
+let resendClient: Resend | null = null;
+
+export const getResendClient = (): Resend | null => {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    return null;
+  }
+  if (!resendClient) {
+    console.log('[EmailService] Resend configuration detected');
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+};
+
+export const isResendConfigured = (): boolean => {
+  return Boolean((process.env.RESEND_API_KEY || '').trim());
 };
 
 const getSmtpCredentials = () => {
@@ -56,18 +81,24 @@ let lastVerificationResult: string = 'PENDING';
 let lastErrorCodeMessage: string | null = null;
 let lastSendResult: string | null = null;
 
-export const getSmtpDiagnostics = () => {
+export const getEmailDiagnostics = () => {
+  const resendActive = isResendConfigured();
   return {
+    provider: resendActive ? 'Resend API' : 'SMTP',
+    resendConfigured: resendActive,
+    senderConfigured: getFromAddress(),
     smtpHost: activeConfig.host,
     smtpPort: activeConfig.port,
     smtpSecureSetting: activeConfig.secure,
     requireTLS: activeConfig.requireTLS || false,
     smtpConfigurationDetected: `host: ${activeConfig.host}, port: ${activeConfig.port}, secure: ${activeConfig.secure}${activeConfig.requireTLS ? ', requireTLS: true' : ''}`,
-    smtpConnectionVerificationResult: lastVerificationResult,
-    smtpErrorCodeMessage: lastErrorCodeMessage,
+    verificationResult: lastVerificationResult,
+    errorCodeMessage: lastErrorCodeMessage,
     emailSendResult: lastSendResult,
   };
 };
+
+export const getSmtpDiagnostics = getEmailDiagnostics;
 
 export const createTransporterForConfig = (config: SmtpTransportConfig): Transporter | null => {
   const { user, pass } = getSmtpCredentials();
@@ -97,23 +128,49 @@ export const getTransporter = (): Transporter | null => {
   return activeTransporter;
 };
 
-export const getFromAddress = () => {
-  const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
-  const rawFrom = (process.env.EMAIL_FROM || '').trim();
+export const getFromAddress = (): string => {
+  const rawFrom = (process.env.EMAIL_FROM || process.env.RESEND_FROM || '').trim();
   if (rawFrom) {
     if (rawFrom.includes('<') && rawFrom.includes('>')) {
       return rawFrom;
     }
     return `SmartFoodRescue <${rawFrom}>`;
   }
-  return `SmartFoodRescue <${user}>`;
+  // Default intended sender identity if EMAIL_FROM is not provided
+  return 'SmartFoodRescue <smartfood1@gmail.com>';
 };
 
 export const verifyEmailConfig = async (): Promise<boolean> => {
+  const resendApiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (resendApiKey) {
+    console.log('[EmailService] Resend configuration detected');
+    const sender = getFromAddress();
+    console.log(`[EmailService] Sender configured: ${sender}`);
+
+    const resend = getResendClient();
+    if (resend) {
+      try {
+        const domainsRes = await resend.domains.list();
+        if (domainsRes.error) {
+          const safeErr = sanitizeError(domainsRes.error.message || domainsRes.error.name);
+          console.warn(`[EmailService] Resend domain check notice: ${safeErr}`);
+        } else {
+          const verifiedDomains = (domainsRes.data?.data || []).filter((d: any) => d.status === 'verified').map((d: any) => d.name);
+          console.log(`[EmailService] Resend API connected successfully (Verified domains: ${verifiedDomains.length > 0 ? verifiedDomains.join(', ') : 'none yet'})`);
+        }
+      } catch (err: any) {
+        const safeErr = sanitizeError(err?.message || err);
+        console.warn(`[EmailService] Resend startup check note: ${safeErr}`);
+      }
+    }
+    lastVerificationResult = 'SUCCESS (Resend API)';
+    return true;
+  }
+
   const { user, pass } = getSmtpCredentials();
 
   if (!user || !pass) {
-    console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing). Emails will be skipped safely.');
+    console.warn('[EmailService] No email provider configured (EMAIL_USER/EMAIL_PASSWORD and RESEND_API_KEY missing). Emails will be skipped safely.');
     lastVerificationResult = 'FAILED (Credentials missing)';
     return false;
   }
@@ -235,17 +292,45 @@ export const sendEmailSafe = async (options: {
     const notifType = options.notificationType || 'NOTIFICATION';
     const fromAddr = getFromAddress();
 
-    console.log('[EmailService] Sending donation notification');
+    console.log('[EmailService] Email send started');
     console.log(`[EmailService] Sending [${notifType}] "${options.subject}"`);
     console.log(`[EmailService] From: ${fromAddr} -> To: ${maskedRecipients}`);
 
+    // 1. Primary: Dispatch via Resend SDK (HTTPS - unblocked by cloud providers)
+    const resend = getResendClient();
+    if (resend) {
+      console.log('[EmailService] Dispatching email via Resend API (HTTPS)...');
+      const response = await resend.emails.send({
+        from: fromAddr,
+        to: validRecipients,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+
+      if (response.error) {
+        const safeErr = sanitizeError(response.error.message || response.error.name || JSON.stringify(response.error));
+        console.error(`[EmailService] Email send failed: ${safeErr}`);
+        lastSendResult = `FAILED (${safeErr})`;
+        console.log('Email send result: FAILED');
+        return false;
+      }
+
+      console.log('[EmailService] Email sent successfully');
+      console.log(`[EmailService] Delivered via Resend to: ${maskedRecipients} (MessageId: ${response.data?.id})`);
+      lastSendResult = `SUCCESS (MessageId: ${response.data?.id})`;
+      console.log('Email send result: SUCCESS');
+      return true;
+    }
+
+    // 2. Fallback: SMTP transport
     if (!activeTransporter) {
       activeTransporter = createTransporterForConfig(activeConfig);
     }
 
     if (!activeTransporter) {
-      console.warn(`[EmailService] Transporter not configured. Email skipped for: ${maskedRecipients}`);
-      lastSendResult = 'FAILED (Transporter not configured)';
+      console.warn(`[EmailService] No email provider configured (missing RESEND_API_KEY and SMTP credentials). Email skipped for: ${maskedRecipients}`);
+      lastSendResult = 'FAILED (No email provider configured)';
       console.log('Email send result: FAILED');
       return false;
     }
@@ -304,7 +389,6 @@ export const sendEmailSafe = async (options: {
     const safeErr = sanitizeError(error);
     const codeOrMsg = error?.code ? `${error.code}: ${safeErr}` : safeErr;
     console.error(`[EmailService] Email send failed: ${codeOrMsg}`);
-    console.error(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
     console.log('Email send result: FAILED');
     lastSendResult = `FAILED (${codeOrMsg})`;
     return false;
@@ -408,7 +492,7 @@ export const sendNgoAcceptanceEmail = async (data: NgoAcceptanceEmailData): Prom
     subject: 'Food Donation Request Accepted - SmartFoodRescue',
     text,
     html,
-    notificationType: 'REQUEST_ACCEPTED'
+    notificationType: 'NGO_ACCEPTED'
   });
 };
 
@@ -484,6 +568,7 @@ export const sendVolunteerStatusEmail = async (data: VolunteerStatusEmailData): 
     subject,
     text,
     html,
+    notificationType: data.status === 'ASSIGNED' ? 'VOLUNTEER_ASSIGNED' : `VOLUNTEER_${data.status}`
   });
 };
 
@@ -573,7 +658,7 @@ export const sendDeliveredEmail = async (data: DeliveredEmailData): Promise<bool
     subject: 'Food Donation Delivered Successfully - SmartFoodRescue',
     text,
     html,
-    notificationType: 'DONATION_DELIVERED'
+    notificationType: 'DELIVERED'
   });
 };
 

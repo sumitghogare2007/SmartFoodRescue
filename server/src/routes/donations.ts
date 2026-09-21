@@ -51,10 +51,18 @@ router.get('/diagnostic/donor-resolution', verifyToken, async (req, res) => {
 });
 router.get('/diagnostic/smtp-status', async (_req, res) => {
   try {
-    const { getSmtpDiagnostics } = await import('../services/emailService');
-    res.json(getSmtpDiagnostics());
+    const { getEmailDiagnostics } = await import('../services/emailService');
+    res.json(getEmailDiagnostics());
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to retrieve SMTP diagnostics' });
+  }
+});
+router.get('/diagnostic/email-status', async (_req, res) => {
+  try {
+    const { getEmailDiagnostics } = await import('../services/emailService');
+    res.json(getEmailDiagnostics());
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve email diagnostics' });
   }
 });
 router.post('/diagnostic/smtp-verify', async (_req, res) => {
