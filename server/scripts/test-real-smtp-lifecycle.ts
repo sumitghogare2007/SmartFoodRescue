@@ -28,7 +28,7 @@ async function runRealSmtpLifecycleTest() {
 
   // 2. Real Donor Recipient target
   // In MongoDB, the registered user email is sumitghogare2007@gmail.com
-  const realDonorEmail = 'sumitghogare2007@gmail.com';
+  const realDonorEmail: string = 'sumitghogare2007@gmail.com';
   console.log(`[2] Target Donor Registered Email: ${maskEmail(realDonorEmail)}`);
 
   if (!isValidEmail(realDonorEmail)) {

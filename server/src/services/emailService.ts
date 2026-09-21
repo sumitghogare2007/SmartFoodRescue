@@ -11,35 +11,90 @@ export const maskEmail = (email: string): string => {
   return `${start}***${end}@${domain}`;
 };
 
-let cachedTransporter: Transporter | null = null;
+export interface SmtpTransportConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  requireTLS?: boolean;
+}
 
-const getTransporter = () => {
+export const sanitizeError = (err: any): string => {
+  if (!err) return 'Unknown error';
+  const msg = typeof err === 'string' ? err : (err.message || err.code || String(err));
+  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : '';
+  const mongoUri = process.env.MONGODB_URI ? process.env.MONGODB_URI.trim() : '';
+  let safe = msg;
+  if (pass && pass.length > 3) safe = safe.split(pass).join('[REDACTED]');
+  if (mongoUri && mongoUri.length > 5) safe = safe.split(mongoUri).join('[REDACTED]');
+  return safe;
+};
+
+const getSmtpCredentials = () => {
   const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
   const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
+  return { user, pass };
+};
 
+const getTargetHost = () => (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+
+export const config465: SmtpTransportConfig = {
+  host: getTargetHost(),
+  port: 465,
+  secure: true,
+};
+
+export const config587: SmtpTransportConfig = {
+  host: getTargetHost(),
+  port: 587,
+  secure: false,
+  requireTLS: true,
+};
+
+let activeConfig: SmtpTransportConfig = config465;
+let activeTransporter: Transporter | null = null;
+let lastVerificationResult: string = 'PENDING';
+let lastErrorCodeMessage: string | null = null;
+let lastSendResult: string | null = null;
+
+export const getSmtpDiagnostics = () => {
+  return {
+    smtpHost: activeConfig.host,
+    smtpPort: activeConfig.port,
+    smtpSecureSetting: activeConfig.secure,
+    requireTLS: activeConfig.requireTLS || false,
+    smtpConfigurationDetected: `host: ${activeConfig.host}, port: ${activeConfig.port}, secure: ${activeConfig.secure}${activeConfig.requireTLS ? ', requireTLS: true' : ''}`,
+    smtpConnectionVerificationResult: lastVerificationResult,
+    smtpErrorCodeMessage: lastErrorCodeMessage,
+    emailSendResult: lastSendResult,
+  };
+};
+
+export const createTransporterForConfig = (config: SmtpTransportConfig): Transporter | null => {
+  const { user, pass } = getSmtpCredentials();
   if (!user || !pass) {
-    console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing).');
     return null;
   }
 
-  if (!cachedTransporter) {
-    console.log('[EmailService] SMTP configuration detected');
-    cachedTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user,
-        pass,
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000,
-    });
-  }
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    requireTLS: config.requireTLS,
+    auth: {
+      user,
+      pass,
+    },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+  });
+};
 
-  return cachedTransporter;
+export const getTransporter = (): Transporter | null => {
+  if (!activeTransporter) {
+    activeTransporter = createTransporterForConfig(activeConfig);
+  }
+  return activeTransporter;
 };
 
 export const getFromAddress = () => {
@@ -55,24 +110,62 @@ export const getFromAddress = () => {
 };
 
 export const verifyEmailConfig = async (): Promise<boolean> => {
-  const user = (process.env.EMAIL_USER || '').trim();
-  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
+  const { user, pass } = getSmtpCredentials();
 
   if (!user || !pass) {
     console.warn('[EmailService] SMTP credentials not fully configured (EMAIL_USER or EMAIL_PASSWORD missing). Emails will be skipped safely.');
+    lastVerificationResult = 'FAILED (Credentials missing)';
     return false;
   }
 
-  try {
-    const transporter = getTransporter();
-    if (!transporter) return false;
-    await transporter.verify();
-    console.log(`[EmailService] SMTP connection verified (Sender: ${maskEmail(user)})`);
-    return true;
-  } catch (error: any) {
-    console.error(`[EmailService] SMTP verification failed: ${error?.message || error}`);
-    return false;
+  // Refresh host configs
+  config465.host = getTargetHost();
+  config587.host = getTargetHost();
+
+  const explicitPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : null;
+  const configsToTest = explicitPort === 587 ? [config587, config465] : [config465, config587];
+
+  for (let i = 0; i < configsToTest.length; i++) {
+    const cfg = configsToTest[i];
+    activeConfig = cfg;
+
+    console.log(`[EmailService] SMTP configuration detected: host=${cfg.host}, port=${cfg.port}, secure=${cfg.secure}${cfg.requireTLS ? ', requireTLS: true' : ''}`);
+    console.log(`[EmailService] SMTP host: ${cfg.host}`);
+    console.log(`[EmailService] SMTP port: ${cfg.port}`);
+    console.log(`[EmailService] SMTP secure setting: ${cfg.secure}`);
+
+    const transporter = createTransporterForConfig(cfg);
+    if (!transporter) continue;
+
+    try {
+      console.log(`[EmailService] Verifying connection to ${cfg.host}:${cfg.port}...`);
+      await transporter.verify();
+      console.log('[EmailService] SMTP connection verification result: SUCCESS');
+      lastVerificationResult = 'SUCCESS';
+      lastErrorCodeMessage = null;
+      activeTransporter = transporter;
+      return true;
+    } catch (error: any) {
+      const safeErr = sanitizeError(error);
+      const codeOrMsg = error?.code ? `${error.code}: ${safeErr}` : safeErr;
+      console.error('[EmailService] SMTP connection verification result: FAILED');
+      console.error(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
+      lastVerificationResult = 'FAILED';
+      lastErrorCodeMessage = codeOrMsg;
+
+      if (i < configsToTest.length - 1) {
+        console.log(`[EmailService] Port ${cfg.port} verification timed out or failed. Testing alternate Gmail submission configuration (Port ${configsToTest[i + 1].port})...`);
+      }
+    }
   }
+
+  // If both configurations failed verification, retain fallback transporter for runtime attempts
+  if (!activeTransporter) {
+    activeConfig = config587;
+    activeTransporter = createTransporterForConfig(config587);
+  }
+
+  return false;
 };
 
 // Base HTML layout for consistent, professional styling
@@ -124,7 +217,6 @@ export const sendEmailSafe = async (options: {
   notificationType?: string;
 }): Promise<boolean> => {
   try {
-    const transporter = getTransporter();
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
     const validRecipients = Array.from(
       new Set(
@@ -147,24 +239,74 @@ export const sendEmailSafe = async (options: {
     console.log(`[EmailService] Sending [${notifType}] "${options.subject}"`);
     console.log(`[EmailService] From: ${fromAddr} -> To: ${maskedRecipients}`);
 
-    if (!transporter) {
+    if (!activeTransporter) {
+      activeTransporter = createTransporterForConfig(activeConfig);
+    }
+
+    if (!activeTransporter) {
       console.warn(`[EmailService] Transporter not configured. Email skipped for: ${maskedRecipients}`);
+      lastSendResult = 'FAILED (Transporter not configured)';
+      console.log('Email send result: FAILED');
       return false;
     }
 
-    const info = await transporter.sendMail({
-      from: fromAddr,
-      to: validRecipients.join(', '),
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    });
+    console.log(`[EmailService] SMTP configuration detected: host=${activeConfig.host}, port=${activeConfig.port}, secure=${activeConfig.secure}${activeConfig.requireTLS ? ', requireTLS: true' : ''}`);
+    console.log(`[EmailService] SMTP host: ${activeConfig.host}`);
+    console.log(`[EmailService] SMTP port: ${activeConfig.port}`);
+    console.log(`[EmailService] SMTP secure setting: ${activeConfig.secure}`);
+
+    let info: any = null;
+    try {
+      info = await activeTransporter.sendMail({
+        from: fromAddr,
+        to: validRecipients.join(', '),
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+    } catch (primaryErr: any) {
+      const safeErr = sanitizeError(primaryErr);
+      const codeOrMsg = primaryErr?.code ? `${primaryErr.code}: ${safeErr}` : safeErr;
+      console.warn(`[EmailService] Primary transport on port ${activeConfig.port} failed: ${codeOrMsg}`);
+      console.warn(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
+
+      // Attempt fallback on alternate Gmail configuration (e.g. 465 -> 587 or 587 -> 465)
+      const altConfig = activeConfig.port === 465 ? config587 : config465;
+      console.log(`[EmailService] Testing alternate Gmail transport on port ${altConfig.port}...`);
+      console.log(`[EmailService] SMTP configuration detected: host=${altConfig.host}, port=${altConfig.port}, secure=${altConfig.secure}${altConfig.requireTLS ? ', requireTLS: true' : ''}`);
+      console.log(`[EmailService] SMTP host: ${altConfig.host}`);
+      console.log(`[EmailService] SMTP port: ${altConfig.port}`);
+      console.log(`[EmailService] SMTP secure setting: ${altConfig.secure}`);
+
+      const altTransporter = createTransporterForConfig(altConfig);
+      if (altTransporter) {
+        info = await altTransporter.sendMail({
+          from: fromAddr,
+          to: validRecipients.join(', '),
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+        activeConfig = altConfig;
+        activeTransporter = altTransporter;
+        console.log(`[EmailService] Alternate transport on port ${altConfig.port} succeeded! Updated active transporter.`);
+      } else {
+        throw primaryErr;
+      }
+    }
 
     console.log('[EmailService] Email sent successfully');
-    console.log(`[EmailService] Email successfully delivered to: ${maskedRecipients} (MessageId: ${info.messageId})`);
+    console.log(`[EmailService] Email successfully delivered to: ${maskedRecipients} (MessageId: ${info?.messageId})`);
+    console.log('Email send result: SUCCESS');
+    lastSendResult = 'SUCCESS';
     return true;
   } catch (error: any) {
-    console.error(`[EmailService] Email send failed: ${error?.message || error}`);
+    const safeErr = sanitizeError(error);
+    const codeOrMsg = error?.code ? `${error.code}: ${safeErr}` : safeErr;
+    console.error(`[EmailService] Email send failed: ${codeOrMsg}`);
+    console.error(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
+    console.log('Email send result: FAILED');
+    lastSendResult = `FAILED (${codeOrMsg})`;
     return false;
   }
 };

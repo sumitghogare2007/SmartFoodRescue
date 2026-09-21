@@ -49,6 +49,23 @@ router.get('/diagnostic/donor-resolution', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Diagnostic query failed' });
   }
 });
+router.get('/diagnostic/smtp-status', async (_req, res) => {
+  try {
+    const { getSmtpDiagnostics } = await import('../services/emailService');
+    res.json(getSmtpDiagnostics());
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve SMTP diagnostics' });
+  }
+});
+router.post('/diagnostic/smtp-verify', async (_req, res) => {
+  try {
+    const { verifyEmailConfig, getSmtpDiagnostics } = await import('../services/emailService');
+    const success = await verifyEmailConfig();
+    res.json({ success, ...getSmtpDiagnostics() });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SMTP verify failed' });
+  }
+});
 router.get('/my/donations', verifyToken, requireRole(['DONOR']), getMyDonations);
 router.post('/mark-expired', verifyToken, requireRole(['ADMIN']), markExpired);
 router.get('/:id', getById);

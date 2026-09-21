@@ -16,8 +16,11 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
   let createdUser: any = null;
   try {
     const { name, email, phone, password, userType, ...roleData } = req.body;
+    const cleanEmail = (email || '').trim().toLowerCase();
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
     if (existingUser) {
       let existingProfile = null;
       if (existingUser.userType === 'DONOR') existingProfile = await Donor.findOne({ userId: existingUser._id });
@@ -31,7 +34,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       }
     }
 
-    const user = new User({ name, email, phone, passwordHash: password, userType });
+    const user = new User({ name, email: cleanEmail, phone, passwordHash: password, userType });
     await user.save();
     createdUser = user;
 
@@ -106,7 +109,10 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const cleanEmail = (email || '').trim();
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
     
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });

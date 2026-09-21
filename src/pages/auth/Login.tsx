@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn({ email, password });
+      await signIn({ email: email.trim().toLowerCase(), password });
       toast.success('Successfully logged in');
       navigate('/dashboard');
     } catch (err: any) {
@@ -23,6 +23,11 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuickFill = (demoEmail: string, demoPass: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
   };
 
   return (
@@ -107,13 +112,41 @@ const Login = () => {
 
         {/* Demo Credentials */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-md p-4">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials:</h4>
-          <ul className="text-xs text-blue-800 space-y-1 font-mono">
-            <li>Admin: admin@smartfoodrescue.com / Admin@123</li>
-            <li>Donor: donor@smartfoodrescue.com / Donor@123</li>
-            <li>NGO: ngo@smartfoodrescue.com / Ngo@123</li>
-            <li>Volunteer: volunteer@smartfoodrescue.com / Volunteer@123</li>
-          </ul>
+          <h4 className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials (Click to fill):</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickFill('admin@smartfoodrescue.com', 'Admin@123')}
+              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+            >
+              <span className="font-semibold text-blue-900 block">Admin</span>
+              <span className="text-blue-700 text-[11px] font-mono block truncate">admin@smartfoodrescue.com</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('donor@smartfoodrescue.com', 'Donor@123')}
+              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+            >
+              <span className="font-semibold text-blue-900 block">Donor</span>
+              <span className="text-blue-700 text-[11px] font-mono block truncate">donor@smartfoodrescue.com</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('ngo@smartfoodrescue.com', 'Ngo@123')}
+              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+            >
+              <span className="font-semibold text-blue-900 block">NGO</span>
+              <span className="text-blue-700 text-[11px] font-mono block truncate">ngo@smartfoodrescue.com</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('volunteer@smartfoodrescue.com', 'Volunteer@123')}
+              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+            >
+              <span className="font-semibold text-blue-900 block">Volunteer</span>
+              <span className="text-blue-700 text-[11px] font-mono block truncate">volunteer@smartfoodrescue.com</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
