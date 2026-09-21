@@ -74,6 +74,15 @@ router.post('/diagnostic/smtp-verify', async (_req, res) => {
     res.status(500).json({ error: 'SMTP verify failed' });
   }
 });
+router.post('/diagnostic/email-verify', async (_req, res) => {
+  try {
+    const { verifyEmailConfig, getEmailDiagnostics } = await import('../services/emailService');
+    const success = await verifyEmailConfig();
+    res.json({ success, ...getEmailDiagnostics() });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Email verify failed' });
+  }
+});
 router.get('/my/donations', verifyToken, requireRole(['DONOR']), getMyDonations);
 router.post('/mark-expired', verifyToken, requireRole(['ADMIN']), markExpired);
 router.get('/:id', getById);

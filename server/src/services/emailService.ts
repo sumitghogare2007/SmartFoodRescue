@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { google } from 'googleapis';
 import nodemailer, { Transporter } from 'nodemailer';
 
 export const maskEmail = (email: string): string => {
@@ -12,6 +12,133 @@ export const maskEmail = (email: string): string => {
   return `${start}***${end}@${domain}`;
 };
 
+export const sanitizeError = (err: any): string => {
+  if (!err) return 'Unknown error';
+  const msg = typeof err === 'string' ? err : (err.message || err.name || err.code || JSON.stringify(err));
+  const clientId = process.env.GMAIL_CLIENT_ID ? process.env.GMAIL_CLIENT_ID.trim() : '';
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET ? process.env.GMAIL_CLIENT_SECRET.trim() : '';
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN ? process.env.GMAIL_REFRESH_TOKEN.trim() : '';
+  const emailPass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : '';
+  const mongoUri = process.env.MONGODB_URI ? process.env.MONGODB_URI.trim() : '';
+  const jwtSecret = process.env.JWT_SECRET ? process.env.JWT_SECRET.trim() : '';
+
+  let safe = msg;
+  if (clientSecret && clientSecret.length > 5) safe = safe.split(clientSecret).join('[REDACTED_CLIENT_SECRET]');
+  if (refreshToken && refreshToken.length > 5) safe = safe.split(refreshToken).join('[REDACTED_REFRESH_TOKEN]');
+  if (clientId && clientId.length > 5) safe = safe.split(clientId).join('[REDACTED_CLIENT_ID]');
+  if (emailPass && emailPass.length > 3) safe = safe.split(emailPass).join('[REDACTED_PASSWORD]');
+  if (mongoUri && mongoUri.length > 5) safe = safe.split(mongoUri).join('[REDACTED_URI]');
+  if (jwtSecret && jwtSecret.length > 3) safe = safe.split(jwtSecret).join('[REDACTED_SECRET]');
+  // Also redact any potential Google OAuth access token
+  safe = safe.replace(/ya29\.[a-zA-Z0-9_\-]+/g, '[REDACTED_ACCESS_TOKEN]');
+  return safe;
+};
+
+// -------------------------------------------------------------
+// GMAIL API OAUTH 2.0 CLIENT
+// -------------------------------------------------------------
+const getGmailOAuthCredentials = () => {
+  const clientId = (process.env.GMAIL_CLIENT_ID || '').trim();
+  const clientSecret = (process.env.GMAIL_CLIENT_SECRET || '').trim();
+  const refreshToken = (process.env.GMAIL_REFRESH_TOKEN || '').trim();
+  return { clientId, clientSecret, refreshToken };
+};
+
+export const isGmailApiConfigured = (): boolean => {
+  const { clientId, clientSecret, refreshToken } = getGmailOAuthCredentials();
+  return Boolean(clientId && clientSecret && refreshToken);
+};
+
+let oAuth2ClientInstance: any = null;
+
+export const getOAuth2Client = () => {
+  const { clientId, clientSecret, refreshToken } = getGmailOAuthCredentials();
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  if (!oAuth2ClientInstance) {
+    console.log('[EmailService] Gmail API OAuth 2.0 configuration detected');
+    const oAuth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      'https://developers.google.com/oauthplayground'
+    );
+    oAuth2Client.setCredentials({
+      refresh_token: refreshToken,
+      scope: 'https://www.googleapis.com/auth/gmail.send',
+    });
+    oAuth2ClientInstance = oAuth2Client;
+  }
+  return oAuth2ClientInstance;
+};
+
+export const getGmailClient = () => {
+  const auth = getOAuth2Client();
+  if (!auth) return null;
+  return google.gmail({ version: 'v1', auth });
+};
+
+// Builds base64url-encoded RFC 2822 multipart email for gmail.users.messages.send
+export const buildRfc2822RawMessage = (options: {
+  from: string;
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+}): string => {
+  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+  const utf8Subject = `=?UTF-8?B?${Buffer.from(options.subject).toString('base64')}?=`;
+
+  const lines = [
+    `From: ${options.from}`,
+    `To: ${options.to.join(', ')}`,
+    `Subject: ${utf8Subject}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    options.text,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    options.html,
+    '',
+    `--${boundary}--`,
+    ''
+  ];
+
+  return Buffer.from(lines.join('\r\n'))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+};
+
+// -------------------------------------------------------------
+// SENDER & DIAGNOSTICS
+// -------------------------------------------------------------
+export const getFromAddress = (): string => {
+  const rawFrom = (process.env.EMAIL_FROM || '').trim();
+  if (rawFrom) {
+    if (rawFrom.includes('<') && rawFrom.includes('>')) {
+      return rawFrom;
+    }
+    return `SmartFoodRescue <${rawFrom}>`;
+  }
+  return 'SmartFoodRescue <smartfoodrescue1@gmail.com>';
+};
+
+let lastVerificationResult: string = 'PENDING';
+let lastErrorCodeMessage: string | null = null;
+let lastSendResult: string | null = null;
+
+// Fallback SMTP config
 export interface SmtpTransportConfig {
   host: string;
   port: number;
@@ -19,79 +146,19 @@ export interface SmtpTransportConfig {
   requireTLS?: boolean;
 }
 
-export const sanitizeError = (err: any): string => {
-  if (!err) return 'Unknown error';
-  const msg = typeof err === 'string' ? err : (err.message || err.name || err.code || JSON.stringify(err));
-  const resendKey = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : '';
-  const emailPass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : '';
-  const mongoUri = process.env.MONGODB_URI ? process.env.MONGODB_URI.trim() : '';
-  const jwtSecret = process.env.JWT_SECRET ? process.env.JWT_SECRET.trim() : '';
-
-  let safe = msg;
-  if (resendKey && resendKey.length > 5) safe = safe.split(resendKey).join('[REDACTED_API_KEY]');
-  if (emailPass && emailPass.length > 3) safe = safe.split(emailPass).join('[REDACTED_PASSWORD]');
-  if (mongoUri && mongoUri.length > 5) safe = safe.split(mongoUri).join('[REDACTED_URI]');
-  if (jwtSecret && jwtSecret.length > 3) safe = safe.split(jwtSecret).join('[REDACTED_SECRET]');
-  return safe;
-};
-
-// Resend Client Initialization (reads key only from process.env.RESEND_API_KEY)
-let resendClient: Resend | null = null;
-
-export const getResendClient = (): Resend | null => {
-  const apiKey = (process.env.RESEND_API_KEY || '').trim();
-  if (!apiKey) {
-    return null;
-  }
-  if (!resendClient) {
-    console.log('[EmailService] Resend configuration detected');
-    resendClient = new Resend(apiKey);
-  }
-  return resendClient;
-};
-
-export const isResendConfigured = (): boolean => {
-  return Boolean((process.env.RESEND_API_KEY || '').trim());
-};
-
-const getSmtpCredentials = () => {
-  const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
-  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
-  return { user, pass };
-};
-
 const getTargetHost = () => (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
-
-export const config465: SmtpTransportConfig = {
-  host: getTargetHost(),
-  port: 465,
-  secure: true,
-};
-
-export const config587: SmtpTransportConfig = {
-  host: getTargetHost(),
-  port: 587,
-  secure: false,
-  requireTLS: true,
-};
-
+export const config465: SmtpTransportConfig = { host: getTargetHost(), port: 465, secure: true };
+export const config587: SmtpTransportConfig = { host: getTargetHost(), port: 587, secure: false, requireTLS: true };
 let activeConfig: SmtpTransportConfig = config465;
 let activeTransporter: Transporter | null = null;
-let lastVerificationResult: string = 'PENDING';
-let lastErrorCodeMessage: string | null = null;
-let lastSendResult: string | null = null;
 
 export const getEmailDiagnostics = () => {
-  const resendActive = isResendConfigured();
+  const gmailActive = isGmailApiConfigured();
   return {
-    provider: resendActive ? 'Resend API' : 'SMTP',
-    resendConfigured: resendActive,
+    provider: gmailActive ? 'Gmail API OAuth 2.0' : 'SMTP',
+    gmailApiConfigured: gmailActive,
     senderConfigured: getFromAddress(),
-    smtpHost: activeConfig.host,
-    smtpPort: activeConfig.port,
-    smtpSecureSetting: activeConfig.secure,
-    requireTLS: activeConfig.requireTLS || false,
-    smtpConfigurationDetected: `host: ${activeConfig.host}, port: ${activeConfig.port}, secure: ${activeConfig.secure}${activeConfig.requireTLS ? ', requireTLS: true' : ''}`,
+    scope: 'https://www.googleapis.com/auth/gmail.send',
     verificationResult: lastVerificationResult,
     errorCodeMessage: lastErrorCodeMessage,
     emailSendResult: lastSendResult,
@@ -100,102 +167,77 @@ export const getEmailDiagnostics = () => {
 
 export const getSmtpDiagnostics = getEmailDiagnostics;
 
+const getSmtpCredentials = () => {
+  const user = (process.env.EMAIL_USER || 'smartfoodrescue1@gmail.com').trim();
+  const pass = process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.replace(/\s+/g, '').trim() : '';
+  return { user, pass };
+};
+
 export const createTransporterForConfig = (config: SmtpTransportConfig): Transporter | null => {
   const { user, pass } = getSmtpCredentials();
-  if (!user || !pass) {
-    return null;
-  }
-
+  if (!user || !pass) return null;
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
     secure: config.secure,
     requireTLS: config.requireTLS,
-    auth: {
-      user,
-      pass,
-    },
+    auth: { user, pass },
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 12000,
   });
 };
 
-export const getTransporter = (): Transporter | null => {
-  if (!activeTransporter) {
-    activeTransporter = createTransporterForConfig(activeConfig);
-  }
-  return activeTransporter;
-};
-
-export const getFromAddress = (): string => {
-  const rawFrom = (process.env.EMAIL_FROM || process.env.RESEND_FROM || '').trim();
-  if (rawFrom) {
-    if (rawFrom.includes('<') && rawFrom.includes('>')) {
-      return rawFrom;
-    }
-    return `SmartFoodRescue <${rawFrom}>`;
-  }
-  // Default intended sender identity if EMAIL_FROM is not provided
-  return 'SmartFoodRescue <smartfood1@gmail.com>';
-};
-
 export const verifyEmailConfig = async (): Promise<boolean> => {
-  const resendApiKey = (process.env.RESEND_API_KEY || '').trim();
-  if (resendApiKey) {
-    console.log('[EmailService] Resend configuration detected');
+  if (isGmailApiConfigured()) {
+    console.log('[EmailService] Gmail API OAuth 2.0 configuration detected');
     const sender = getFromAddress();
     console.log(`[EmailService] Sender configured: ${sender}`);
+    console.log('[EmailService] OAuth2 scope: https://www.googleapis.com/auth/gmail.send');
 
-    const resend = getResendClient();
-    if (resend) {
-      try {
-        const domainsRes = await resend.domains.list();
-        if (domainsRes.error) {
-          const safeErr = sanitizeError(domainsRes.error.message || domainsRes.error.name);
-          console.warn(`[EmailService] Resend domain check notice: ${safeErr}`);
-        } else {
-          const verifiedDomains = (domainsRes.data?.data || []).filter((d: any) => d.status === 'verified').map((d: any) => d.name);
-          console.log(`[EmailService] Resend API connected successfully (Verified domains: ${verifiedDomains.length > 0 ? verifiedDomains.join(', ') : 'none yet'})`);
+    try {
+      const auth = getOAuth2Client();
+      if (auth) {
+        console.log('[EmailService] Verifying Gmail OAuth2 credentials and token availability...');
+        const tokenResponse = await auth.getAccessToken();
+        if (tokenResponse?.token) {
+          console.log('[EmailService] Gmail API OAuth 2.0 token successfully authenticated');
+          lastVerificationResult = 'SUCCESS (Gmail API OAuth 2.0)';
+          lastErrorCodeMessage = null;
+          return true;
         }
-      } catch (err: any) {
-        const safeErr = sanitizeError(err?.message || err);
-        console.warn(`[EmailService] Resend startup check note: ${safeErr}`);
       }
+    } catch (err: any) {
+      const safeErr = sanitizeError(err?.message || err);
+      console.error(`[EmailService] Gmail API OAuth 2.0 authentication error: ${safeErr}`);
+      lastVerificationResult = `FAILED (${safeErr})`;
+      lastErrorCodeMessage = safeErr;
+      return false;
     }
-    lastVerificationResult = 'SUCCESS (Resend API)';
+    lastVerificationResult = 'SUCCESS (Gmail API OAuth 2.0 configured)';
     return true;
   }
 
+  // Fallback to SMTP verify if Gmail API is not configured (e.g. offline dev)
   const { user, pass } = getSmtpCredentials();
-
   if (!user || !pass) {
-    console.warn('[EmailService] No email provider configured (EMAIL_USER/EMAIL_PASSWORD and RESEND_API_KEY missing). Emails will be skipped safely.');
+    console.warn('[EmailService] No email provider configured (missing GMAIL_CLIENT_ID / GMAIL_REFRESH_TOKEN and SMTP credentials). Emails will be skipped safely.');
     lastVerificationResult = 'FAILED (Credentials missing)';
     return false;
   }
 
-  // Refresh host configs
   config465.host = getTargetHost();
   config587.host = getTargetHost();
-
   const explicitPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : null;
   const configsToTest = explicitPort === 587 ? [config587, config465] : [config465, config587];
 
   for (let i = 0; i < configsToTest.length; i++) {
     const cfg = configsToTest[i];
     activeConfig = cfg;
-
-    console.log(`[EmailService] SMTP configuration detected: host=${cfg.host}, port=${cfg.port}, secure=${cfg.secure}${cfg.requireTLS ? ', requireTLS: true' : ''}`);
-    console.log(`[EmailService] SMTP host: ${cfg.host}`);
-    console.log(`[EmailService] SMTP port: ${cfg.port}`);
-    console.log(`[EmailService] SMTP secure setting: ${cfg.secure}`);
-
+    console.log(`[EmailService] SMTP configuration detected: host=${cfg.host}, port=${cfg.port}, secure=${cfg.secure}`);
     const transporter = createTransporterForConfig(cfg);
     if (!transporter) continue;
-
     try {
-      console.log(`[EmailService] Verifying connection to ${cfg.host}:${cfg.port}...`);
       await transporter.verify();
       console.log('[EmailService] SMTP connection verification result: SUCCESS');
       lastVerificationResult = 'SUCCESS';
@@ -209,19 +251,13 @@ export const verifyEmailConfig = async (): Promise<boolean> => {
       console.error(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
       lastVerificationResult = 'FAILED';
       lastErrorCodeMessage = codeOrMsg;
-
-      if (i < configsToTest.length - 1) {
-        console.log(`[EmailService] Port ${cfg.port} verification timed out or failed. Testing alternate Gmail submission configuration (Port ${configsToTest[i + 1].port})...`);
-      }
     }
   }
 
-  // If both configurations failed verification, retain fallback transporter for runtime attempts
   if (!activeTransporter) {
     activeConfig = config587;
     activeTransporter = createTransporterForConfig(config587);
   }
-
   return false;
 };
 
@@ -296,11 +332,11 @@ export const sendEmailSafe = async (options: {
     console.log(`[EmailService] Sending [${notifType}] "${options.subject}"`);
     console.log(`[EmailService] From: ${fromAddr} -> To: ${maskedRecipients}`);
 
-    // 1. Primary: Dispatch via Resend SDK (HTTPS - unblocked by cloud providers)
-    const resend = getResendClient();
-    if (resend) {
-      console.log('[EmailService] Dispatching email via Resend API (HTTPS)...');
-      const response = await resend.emails.send({
+    // 1. Primary: Dispatch via Gmail API OAuth 2.0 (messages.send)
+    const gmail = getGmailClient();
+    if (gmail) {
+      console.log('[EmailService] Dispatching email via Gmail API OAuth 2.0 (gmail.users.messages.send)...');
+      const raw = buildRfc2822RawMessage({
         from: fromAddr,
         to: validRecipients,
         subject: options.subject,
@@ -308,17 +344,16 @@ export const sendEmailSafe = async (options: {
         html: options.html,
       });
 
-      if (response.error) {
-        const safeErr = sanitizeError(response.error.message || response.error.name || JSON.stringify(response.error));
-        console.error(`[EmailService] Email send failed: ${safeErr}`);
-        lastSendResult = `FAILED (${safeErr})`;
-        console.log('Email send result: FAILED');
-        return false;
-      }
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw,
+        },
+      });
 
       console.log('[EmailService] Email sent successfully');
-      console.log(`[EmailService] Delivered via Resend to: ${maskedRecipients} (MessageId: ${response.data?.id})`);
-      lastSendResult = `SUCCESS (MessageId: ${response.data?.id})`;
+      console.log(`[EmailService] Delivered via Gmail API to: ${maskedRecipients} (MessageId: ${res.data?.id})`);
+      lastSendResult = `SUCCESS (MessageId: ${res.data?.id})`;
       console.log('Email send result: SUCCESS');
       return true;
     }
@@ -329,56 +364,19 @@ export const sendEmailSafe = async (options: {
     }
 
     if (!activeTransporter) {
-      console.warn(`[EmailService] No email provider configured (missing RESEND_API_KEY and SMTP credentials). Email skipped for: ${maskedRecipients}`);
+      console.warn(`[EmailService] No email provider configured (missing GMAIL_CLIENT_ID and SMTP credentials). Email skipped for: ${maskedRecipients}`);
       lastSendResult = 'FAILED (No email provider configured)';
       console.log('Email send result: FAILED');
       return false;
     }
 
-    console.log(`[EmailService] SMTP configuration detected: host=${activeConfig.host}, port=${activeConfig.port}, secure=${activeConfig.secure}${activeConfig.requireTLS ? ', requireTLS: true' : ''}`);
-    console.log(`[EmailService] SMTP host: ${activeConfig.host}`);
-    console.log(`[EmailService] SMTP port: ${activeConfig.port}`);
-    console.log(`[EmailService] SMTP secure setting: ${activeConfig.secure}`);
-
-    let info: any = null;
-    try {
-      info = await activeTransporter.sendMail({
-        from: fromAddr,
-        to: validRecipients.join(', '),
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-      });
-    } catch (primaryErr: any) {
-      const safeErr = sanitizeError(primaryErr);
-      const codeOrMsg = primaryErr?.code ? `${primaryErr.code}: ${safeErr}` : safeErr;
-      console.warn(`[EmailService] Primary transport on port ${activeConfig.port} failed: ${codeOrMsg}`);
-      console.warn(`[EmailService] SMTP error code/message: ${codeOrMsg}`);
-
-      // Attempt fallback on alternate Gmail configuration (e.g. 465 -> 587 or 587 -> 465)
-      const altConfig = activeConfig.port === 465 ? config587 : config465;
-      console.log(`[EmailService] Testing alternate Gmail transport on port ${altConfig.port}...`);
-      console.log(`[EmailService] SMTP configuration detected: host=${altConfig.host}, port=${altConfig.port}, secure=${altConfig.secure}${altConfig.requireTLS ? ', requireTLS: true' : ''}`);
-      console.log(`[EmailService] SMTP host: ${altConfig.host}`);
-      console.log(`[EmailService] SMTP port: ${altConfig.port}`);
-      console.log(`[EmailService] SMTP secure setting: ${altConfig.secure}`);
-
-      const altTransporter = createTransporterForConfig(altConfig);
-      if (altTransporter) {
-        info = await altTransporter.sendMail({
-          from: fromAddr,
-          to: validRecipients.join(', '),
-          subject: options.subject,
-          text: options.text,
-          html: options.html,
-        });
-        activeConfig = altConfig;
-        activeTransporter = altTransporter;
-        console.log(`[EmailService] Alternate transport on port ${altConfig.port} succeeded! Updated active transporter.`);
-      } else {
-        throw primaryErr;
-      }
-    }
+    let info: any = await activeTransporter.sendMail({
+      from: fromAddr,
+      to: validRecipients.join(', '),
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+    });
 
     console.log('[EmailService] Email sent successfully');
     console.log(`[EmailService] Email successfully delivered to: ${maskedRecipients} (MessageId: ${info?.messageId})`);
@@ -699,5 +697,6 @@ export const sendDistributedEmail = async (data: DistributedEmailData): Promise<
     subject: 'Food Donation Successfully Distributed - SmartFoodRescue',
     text: `SmartFoodRescue: Food (${data.foodType}) successfully distributed by ${data.ngoName} to ${data.beneficiaryCount || 'community'} beneficiaries. Distribution ID: #${data.distributionId.slice(-6)}`,
     html,
+    notificationType: 'DISTRIBUTED'
   });
 };
