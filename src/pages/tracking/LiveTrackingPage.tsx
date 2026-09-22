@@ -94,23 +94,23 @@ export const LiveTrackingPage: React.FC = () => {
     );
   }
 
-  const pickupPoint = details.donor?.location
-    ? {
-        latitude: details.donor.location.latitude || 19.1197,
-        longitude: details.donor.location.longitude || 72.8464,
-        name: details.donor.name,
-        address: `${details.donor.location.address}, ${details.donor.location.area}`
-      }
-    : null;
+  const pickupPoint = {
+    latitude: details.donor?.location?.latitude || 19.1197,
+    longitude: details.donor?.location?.longitude || 72.8464,
+    name: details.donor?.name || 'Origin Food Donor',
+    address: details.donor?.location?.address
+      ? `${details.donor.location.address}, ${details.donor.location.area || ''}`
+      : 'Pickup Address on file'
+  };
 
-  const destPoint = details.destinationNgo?.location
-    ? {
-        latitude: details.destinationNgo.location.latitude || 19.076,
-        longitude: details.destinationNgo.location.longitude || 72.8777,
-        name: details.destinationNgo.name,
-        address: `${details.destinationNgo.location.address}, ${details.destinationNgo.location.area}`
-      }
-    : null;
+  const destPoint = {
+    latitude: details.destinationNgo?.location?.latitude || 19.076,
+    longitude: details.destinationNgo?.location?.longitude || 72.8777,
+    name: details.destinationNgo?.name || 'Delivery Destination (NGO)',
+    address: details.destinationNgo?.location?.address
+      ? `${details.destinationNgo.location.address}, ${details.destinationNgo.location.area || ''}`
+      : 'NGO Facility Address on file'
+  };
 
   const volunteerPoint = liveLocation
     ? {
@@ -200,7 +200,12 @@ export const LiveTrackingPage: React.FC = () => {
               pickupLocation={pickupPoint}
               destinationLocation={destPoint}
               route={route}
-              className="h-[460px] w-full rounded-lg"
+              distanceKm={route?.distanceKm}
+              durationMinutes={route?.durationMinutes}
+              lastUpdatedText={lastUpdatedText}
+              connectionStatus={connectionStatus}
+              isStale={isStale}
+              className="h-[480px] w-full rounded-lg"
               autoCenter={Boolean(volunteerPoint)}
             />
 

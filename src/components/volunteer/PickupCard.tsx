@@ -1,4 +1,5 @@
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, Truck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
@@ -81,6 +82,18 @@ export function PickupCard({ pickup, onUpdateStatus, isVolunteerView = true }: P
       </div>
 
       {renderActionButton()}
+
+      {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(status) && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <Link
+            to={`/tracking/${id}`}
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-[#166534] hover:bg-green-800 text-white rounded-md text-xs font-bold transition shadow-xs"
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>Track Volunteer</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

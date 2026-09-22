@@ -13,7 +13,9 @@ import {
   Mail, 
   Heart, 
   ShieldCheck, 
-  Utensils 
+  Utensils,
+  Navigation,
+  ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -175,13 +177,16 @@ const PickupsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {pickup.volunteerId && !['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
+                      {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(pickup.pickupStatus) && (
                         <Link
                           to={`/tracking/${pickup._id}`}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-xs"
+                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#166534] hover:bg-green-800 text-white shadow-xs transition-colors flex items-center gap-1.5"
                         >
                           <Truck className="w-3.5 h-3.5" />
-                          Track Volunteer
+                          <span>Track Volunteer</span>
+                          {pickup.pickupStatus === 'EN_ROUTE' && (
+                            <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                          )}
                         </Link>
                       )}
                       {(authUser?.userType === 'ADMIN' || authUser?.userType === 'NGO' || authUser?.userType === 'DONOR') && 
@@ -199,6 +204,31 @@ const PickupsPage = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Active Live Tracking Banner for DISPATCHED, EN_ROUTE, ARRIVED */}
+                  {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(pickup.pickupStatus) && (
+                    <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping"></span>
+                        <span className="font-bold text-emerald-950">
+                          {pickup.pickupStatus === 'EN_ROUTE'
+                            ? '🚚 Volunteer is En Route with Rescue Food'
+                            : pickup.pickupStatus === 'ARRIVED'
+                            ? '📍 Volunteer Has Arrived at Destination (NGO)'
+                            : '📦 Delivery Dispatched & Ready for Navigation'}
+                        </span>
+                        <span className="text-emerald-700 hidden sm:inline">• Live GPS tracking available</span>
+                      </div>
+                      <Link
+                        to={`/tracking/${pickup._id}`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#166534] hover:bg-green-800 text-white rounded-md text-xs font-bold transition shadow-xs"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>Track Volunteer Live Map</span>
+                        <ArrowRight className="w-3 h-3 ml-0.5" />
+                      </Link>
+                    </div>
+                  )}
 
                   {/* Distribution Banner (When Distributed) */}
                   {pickup.pickupStatus === 'DISTRIBUTED' && (

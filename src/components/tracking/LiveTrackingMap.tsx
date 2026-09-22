@@ -21,6 +21,11 @@ export interface LiveTrackingMapProps {
   pickupLocation?: LocationPoint | null;
   destinationLocation?: LocationPoint | null;
   route?: RouteData | null;
+  distanceKm?: number;
+  durationMinutes?: number;
+  lastUpdatedText?: string;
+  connectionStatus?: string;
+  isStale?: boolean;
   className?: string;
   autoCenter?: boolean;
 }
@@ -81,6 +86,11 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   pickupLocation,
   destinationLocation,
   route,
+  distanceKm = route?.distanceKm,
+  durationMinutes = route?.durationMinutes,
+  lastUpdatedText,
+  connectionStatus = 'LIVE',
+  isStale = false,
   className = 'h-96 w-full rounded-xl overflow-hidden',
   autoCenter = true
 }) => {
@@ -243,6 +253,60 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+      {/* Floating On-Map HUD (Requirement 5: Status, Distance, ETA, Last Updated) */}
+      <div className="absolute top-3 left-3 z-400 flex flex-col gap-2 max-w-[280px]">
+        {/* Connection / Status Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold shadow-md backdrop-blur-md bg-white/95 border border-gray-200">
+          {connectionStatus === 'LIVE' && !isStale && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-emerald-800 font-extrabold tracking-wide">LIVE TRACKING</span>
+            </>
+          )}
+          {connectionStatus === 'RECONNECTING' && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+              <span className="text-amber-800 font-extrabold tracking-wide">RECONNECTING...</span>
+            </>
+          )}
+          {isStale && connectionStatus !== 'COMPLETED' && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span className="text-amber-800 font-extrabold tracking-wide">LOCATION STALE</span>
+            </>
+          )}
+          {connectionStatus === 'COMPLETED' && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <span className="text-blue-800 font-extrabold tracking-wide">DELIVERY ARRIVED</span>
+            </>
+          )}
+          {(!connectionStatus || (connectionStatus !== 'LIVE' && connectionStatus !== 'RECONNECTING' && connectionStatus !== 'COMPLETED' && !isStale)) && (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <span className="text-emerald-800 font-extrabold tracking-wide">{connectionStatus}</span>
+            </>
+          )}
+        </div>
+
+        {/* Distance & ETA Floating Card */}
+        {(distanceKm !== undefined || durationMinutes !== undefined || lastUpdatedText) && (
+          <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-lg shadow-md border border-gray-200 text-xs space-y-1">
+            <div className="flex items-center justify-between gap-3 text-gray-900 font-bold">
+              <span>{distanceKm !== undefined ? `${distanceKm} km` : '-- km'}</span>
+              <span className="text-gray-300">•</span>
+              <span className="text-[#166534]">{durationMinutes !== undefined ? `${durationMinutes} min ETA` : '-- min ETA'}</span>
+            </div>
+            {lastUpdatedText && (
+              <div className="text-[10px] text-gray-500 pt-1 border-t border-gray-100 flex items-center justify-between">
+                <span>Updated:</span>
+                <span className="font-medium text-gray-700">{lastUpdatedText}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Floating Map Controls */}
       <div className="absolute top-3 right-3 z-400 flex flex-col gap-2">
