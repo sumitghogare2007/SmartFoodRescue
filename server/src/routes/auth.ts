@@ -7,7 +7,7 @@ const router = express.Router();
 // In-memory sliding rate limiter for forgot-password endpoint (5 requests per 15 minutes per IP)
 const forgotPasswordLimitMap = new Map<string, { count: number; firstRequestTime: number }>();
 const FORGOT_PASSWORD_WINDOW_MS = 15 * 60 * 1000;
-const FORGOT_PASSWORD_MAX_REQUESTS = 5;
+const FORGOT_PASSWORD_MAX_REQUESTS = process.env.NODE_ENV === 'production' ? 5 : 50;
 
 const forgotPasswordRateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown-ip';

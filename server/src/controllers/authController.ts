@@ -242,17 +242,39 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
 
     console.log(`[PasswordReset] Token hash and 30m expiry saved to database for: ${masked}`);
 
-    // Dispatch email via Gmail API OAuth 2.0 (errors safely caught and never exposed to client)
-    sendPasswordResetEmail({
-      to: user.email,
-      resetUrl,
-      userName: user.name
-    }).catch((emailErr) => {
+    // Dispatch email (errors safely caught and logged)
+    let emailSent = false;
+    try {
+      emailSent = await sendPasswordResetEmail({
+        to: user.email,
+        resetUrl,
+        userName: user.name
+      });
+    } catch (emailErr) {
       console.error(`[PasswordReset] Failed to send password reset email to ${masked}: ${sanitizeError(emailErr)}`);
-    });
+    }
+
+    const isDev = process.env.NODE_ENV !== 'production';
+
+    // Prominently log the reset URL in the console for developers/administrators
+    console.log('\n======================================================');
+    console.log(`[PasswordReset] PASSWORD RESET LINK GENERATED:`);
+    console.log(`User:       ${user.name} (${cleanEmail})`);
+    console.log(`Reset URL:  ${resetUrl}`);
+    console.log(`Email Sent: ${emailSent ? 'YES' : 'NO (SMTP credentials failed or not configured)'}`);
+    if (!emailSent) {
+      console.log(`Note:       In dev mode, use the link above to test or complete password reset.`);
+    }
+    console.log('======================================================\n');
 
     return res.status(200).json({
-      message: 'Password reset link has been sent to your email.'
+      message: emailSent
+        ? 'Password reset link has been sent to your email.'
+        : isDev
+          ? 'Password reset link generated. In development mode, use the direct link provided below or in server logs.'
+          : 'If an account exists with this email, a password reset link has been sent.',
+      emailSent,
+      ...(isDev ? { resetUrl } : {})
     });
   } catch (error) {
     console.error('[PasswordReset] Error processing forgot password request:', sanitizeError(error));

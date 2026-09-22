@@ -13,7 +13,8 @@
     "verify:atlas": "ts-node scripts/verify-atlas-users.ts",
     "test:prod-reg": "ts-node scripts/test-registration-prod.ts",
     "test:smtp": "ts-node scripts/test-real-smtp-lifecycle.ts",
-    "test:tracking": "ts-node scripts/test-realtime-tracking.ts"
+    "test:tracking": "ts-node scripts/test-realtime-tracking.ts",
+    "test:password-reset": "node scripts/test-forgot-password-lifecycle.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Mail, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, AlertCircle, Loader2, KeyRound, ExternalLink, Copy, Check } from 'lucide-react';
 import Logo from '../../components/ui/Logo';
 import { apiClient } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -10,10 +10,15 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<boolean>(false);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setDevResetUrl(null);
+    setCopied(false);
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -23,15 +28,28 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      await apiClient.post('/api/auth/forgot-password', { email: cleanEmail });
+      const res = await apiClient.post('/api/auth/forgot-password', { email: cleanEmail });
       setSubmitted(true);
-      toast.success('Password reset link sent to your email');
+      setEmailSent(res.data?.emailSent ?? false);
+      if (res.data?.resetUrl) {
+        setDevResetUrl(res.data.resetUrl);
+      }
+      toast.success(res.data?.message || 'Password reset link generated!');
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Unable to process your request. Please try again.';
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (devResetUrl) {
+      navigator.clipboard.writeText(devResetUrl);
+      setCopied(true);
+      toast.success('Reset link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -63,6 +81,46 @@ const ForgotPassword = () => {
               <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800 text-left">
                 <strong>Note:</strong> The reset link is valid for <strong>30 minutes</strong>. If you don't see it in your inbox, please check your spam or junk folder.
               </div>
+
+              {devResetUrl && (
+                <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-3 text-left space-y-2 shadow-sm">
+                  <div className="flex items-center text-emerald-800 font-semibold text-xs uppercase tracking-wide">
+                    <KeyRound className="w-4 h-4 mr-1.5 text-emerald-700 flex-shrink-0" />
+                    <span>Direct Password Reset Link</span>
+                  </div>
+                  <p className="text-xs text-emerald-700 leading-relaxed">
+                    {emailSent
+                      ? 'Link also dispatched to email. You can also click below to reset immediately:'
+                      : 'Development Mode: Since SMTP email delivery is unavailable locally, use this direct link to reset your password:'}
+                  </p>
+                  <div className="pt-1 flex flex-col sm:flex-row gap-2">
+                    <Link
+                      to={devResetUrl.replace(/^https?:\/\/[^/]+/, '') || devResetUrl}
+                      className="inline-flex items-center justify-center px-3 py-1.5 bg-[#166534] text-white text-xs font-semibold rounded hover:bg-green-800 transition"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      Open Reset Password Page
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={copyToClipboard}
+                      className="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-emerald-400 text-emerald-800 text-xs font-medium rounded hover:bg-emerald-100 transition cursor-pointer"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
+                          Copy Link
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 space-y-3">
                 <Link

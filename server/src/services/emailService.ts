@@ -402,6 +402,9 @@ export const sendEmailSafe = async (options: {
     const safeErr = sanitizeError(error);
     const codeOrMsg = error?.code ? `${error.code}: ${safeErr}` : safeErr;
     console.error(`[EmailService] Email send failed: ${codeOrMsg}`);
+    if (codeOrMsg.includes('EAUTH') || codeOrMsg.includes('Invalid login') || codeOrMsg.includes('BadCredentials')) {
+      console.warn('[EmailService] Notice: Google SMTP rejected credentials. To enable real email delivery, create a new 16-character Google App Password (requires 2-Step Verification) and update EMAIL_PASSWORD in server/.env.');
+    }
     console.log('Email send result: FAILED');
     lastSendResult = `FAILED (${codeOrMsg})`;
     return false;
