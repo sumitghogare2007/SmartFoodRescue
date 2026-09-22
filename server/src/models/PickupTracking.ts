@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPickupTracking extends Document {
   pickupId: mongoose.Types.ObjectId;
-  status: 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'DELIVERED' | 'DISTRIBUTED';
+  status: 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'DELIVERED' | 'DISTRIBUTED';
   changedBy: mongoose.Types.ObjectId;
   changedAt: Date;
   note?: string;
@@ -14,7 +14,7 @@ const pickupTrackingSchema = new Schema<IPickupTracking>({
   pickupId: { type: Schema.Types.ObjectId, ref: 'Pickup', required: true },
   status: { 
     type: String, 
-    enum: ['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'DELIVERED', 'DISTRIBUTED'], 
+    enum: ['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'], 
     required: true 
   },
   changedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

@@ -23,6 +23,7 @@ import DonationDetail from './pages/donations/DonationDetail';
 import PickupsPage from './pages/pickups/PickupsPage';
 import UsersPage from './pages/admin/UsersPage';
 import Settings from './pages/Settings';
+import LiveTrackingPage from './pages/tracking/LiveTrackingPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { authUser, loading } = useAuth();
@@ -77,6 +78,7 @@ const App = () => {
                 </Route>
 
                 <Route path="users" element={<UsersPage />} />
+                <Route path="tracking/:pickupId" element={<LiveTrackingPage />} />
 
                 <Route path="settings" element={<Settings />} />
               </Route>

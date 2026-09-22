@@ -145,11 +145,13 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
     const pickup = await Pickup.findById(req.params.id).populate('requestId');
     if (!pickup) return res.status(404).json({ message: 'Pickup not found' });
 
-    // Valid state transitions
+    // Valid state transitions (Exact sequence: ASSIGNED -> RECEIVED -> DISPATCHED -> EN_ROUTE -> ARRIVED -> DELIVERED -> DISTRIBUTED)
     const validTransitions: Record<string, string[]> = {
       'ASSIGNED': ['RECEIVED'],
       'RECEIVED': ['DISPATCHED'],
-      'DISPATCHED': ['DELIVERED'],
+      'DISPATCHED': ['EN_ROUTE'],
+      'EN_ROUTE': ['ARRIVED'],
+      'ARRIVED': ['DELIVERED'],
       'DELIVERED': ['DISTRIBUTED'],
       'DISTRIBUTED': []
     };
@@ -187,7 +189,7 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
       const donation = await FoodDonation.findById(request.donationId);
       if (donation) {
         if (status === 'RECEIVED') donation.status = 'RECEIVED';
-        else if (status === 'DISPATCHED') donation.status = 'DISPATCHED';
+        else if (status === 'DISPATCHED' || status === 'EN_ROUTE' || status === 'ARRIVED') donation.status = 'DISPATCHED';
         else if (status === 'DELIVERED') {
           donation.status = 'DELIVERED';
           // Ensure Distribution record exists

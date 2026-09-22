@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiClient } from '../../lib/api';
 import type { Pickup } from '../../types';
 import { 
@@ -58,13 +59,17 @@ const PickupsPage = () => {
         return 'bg-teal-50 text-teal-800 border-teal-300';
       case 'DELIVERED':
         return 'bg-green-50 text-green-800 border-green-300';
-      case 'DISPATCHED':
+      case 'ARRIVED':
         return 'bg-purple-50 text-purple-800 border-purple-300';
-      case 'RECEIVED':
+      case 'EN_ROUTE':
+        return 'bg-emerald-50 text-emerald-800 border-emerald-300 animate-pulse';
+      case 'DISPATCHED':
         return 'bg-amber-50 text-amber-800 border-amber-300';
+      case 'RECEIVED':
+        return 'bg-blue-50 text-blue-800 border-blue-300';
       case 'ASSIGNED':
       default:
-        return 'bg-blue-50 text-blue-800 border-blue-300';
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -84,7 +89,7 @@ const PickupsPage = () => {
 
       {/* Filter Tabs */}
       <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 flex gap-2 overflow-x-auto">
-        {['ALL', 'ASSIGNED', 'RECEIVED', 'DISPATCHED', 'DELIVERED', 'DISTRIBUTED'].map(status => (
+        {['ALL', 'ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'].map(status => (
           <button 
             key={status}
             onClick={() => setFilter(status)}
@@ -170,6 +175,15 @@ const PickupsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {pickup.volunteerId && !['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
+                        <Link
+                          to={`/tracking/${pickup._id}`}
+                          className="px-2.5 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-xs"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          Track Volunteer
+                        </Link>
+                      )}
                       {(authUser?.userType === 'ADMIN' || authUser?.userType === 'NGO' || authUser?.userType === 'DONOR') && 
                        !['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
                         <button
@@ -331,16 +345,16 @@ const PickupsPage = () => {
 
                     </div>
 
-                    {/* Column 3: 5-Stage Audit Timeline */}
+                    {/* Column 3: 7-Stage Audit Timeline */}
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col">
                       <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 text-center">
-                        5-Stage Rescue Timeline
+                        7-Stage Rescue Timeline
                       </p>
 
                       <div className="space-y-4 relative flex-1">
                         <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-gray-200"></div>
 
-                        {['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'DELIVERED', 'DISTRIBUTED'].map((step, idx, arr) => {
+                        {['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'].map((step, idx, arr) => {
                           const statusIndex = arr.indexOf(pickup.pickupStatus);
                           const isCompleted = idx <= statusIndex;
                           const isCurrent = idx === statusIndex;

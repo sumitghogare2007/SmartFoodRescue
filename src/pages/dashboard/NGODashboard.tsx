@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ngoService } from '../../services/ngoService';
 import { apiClient } from '../../lib/api';
 import type { FoodDonation, Pickup, DonationRequest, Distribution } from '../../types';
@@ -377,18 +377,29 @@ const NGODashboard = () => {
                           Volunteer: <span className="font-semibold text-gray-800">{vol?.userId?.name || 'Assigned Volunteer'}</span> ({vol?.vehicleType || 'Vehicle'}) | Phone: {vol?.userId?.phone || 'N/A'}
                         </p>
                       </div>
-                      <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-full">
-                        {p.pickupStatus}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {p.volunteerId && !['DELIVERED', 'DISTRIBUTED'].includes(p.pickupStatus) && (
+                          <Link
+                            to={`/tracking/${p._id}`}
+                            className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            Track Volunteer
+                          </Link>
+                        )}
+                        <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-full">
+                          {p.pickupStatus}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Timeline visualization */}
-                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                      {['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'DELIVERED'].map((step, idx, arr) => {
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                      {['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED'].map((step, idx, arr) => {
                         const sIdx = arr.indexOf(p.pickupStatus);
                         const isDone = sIdx >= idx;
                         return (
-                          <div key={step} className={`p-2 rounded border font-medium ${
+                          <div key={step} className={`p-2 rounded border font-medium text-[11px] ${
                             isDone ? 'bg-green-50 text-green-800 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200'
                           }`}>
                             {step}

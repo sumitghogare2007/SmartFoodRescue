@@ -89,7 +89,56 @@ export interface DonationRequest {
   message?: string;
 }
 
-export type PickupStatus = 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'DELIVERED' | 'DISTRIBUTED';
+export type PickupStatus = 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'DELIVERED' | 'DISTRIBUTED';
+
+export interface LiveLocationData {
+  pickupId: string;
+  trackingSessionId?: string;
+  volunteerId?: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  speed?: number;
+  heading?: number;
+  status: 'ACTIVE' | 'ARRIVED' | 'STOPPED';
+  updatedAt?: string;
+  timestamp?: string;
+}
+
+export interface PickupTrackingDetails {
+  pickupId: string;
+  pickupStatus: PickupStatus;
+  trackingSessionId?: string | null;
+  liveLocation?: LiveLocationData | null;
+  donor: {
+    name: string;
+    phone?: string;
+    location?: {
+      address: string;
+      area: string;
+      city: string;
+      latitude?: number;
+      longitude?: number;
+    } | null;
+  };
+  destinationNgo: {
+    name: string;
+    phone?: string;
+    location?: {
+      address: string;
+      area: string;
+      city: string;
+      latitude?: number;
+      longitude?: number;
+    } | null;
+  };
+  volunteer?: {
+    id: string;
+    name: string;
+    phone?: string;
+    vehicleType?: string;
+  } | null;
+}
 
 export interface StatusHistoryEntry {
   status: PickupStatus;

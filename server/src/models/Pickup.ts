@@ -5,7 +5,7 @@ export interface IPickup extends Document {
   volunteerId?: mongoose.Types.ObjectId;
   pickupDate?: Date;
   pickupTime?: string;
-  pickupStatus: 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'DELIVERED' | 'DISTRIBUTED';
+  pickupStatus: 'ASSIGNED' | 'RECEIVED' | 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'DELIVERED' | 'DISTRIBUTED';
   notes?: string;
   statusHistory: {
     status: string;
@@ -22,7 +22,11 @@ const pickupSchema = new Schema<IPickup>({
   volunteerId: { type: Schema.Types.ObjectId, ref: 'Volunteer' },
   pickupDate: { type: Date },
   pickupTime: { type: String },
-  pickupStatus: { type: String, enum: ['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'DELIVERED', 'DISTRIBUTED'], default: 'ASSIGNED' },
+  pickupStatus: { 
+    type: String, 
+    enum: ['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'], 
+    default: 'ASSIGNED' 
+  },
   notes: { type: String },
   statusHistory: [{
     status: { type: String, required: true },

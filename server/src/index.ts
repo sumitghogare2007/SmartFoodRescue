@@ -1,11 +1,14 @@
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { Server as SocketIOServer } from 'socket.io';
 import { errorHandler } from './middleware/error';
 import connectDB from './config/db';
+import { trackingSocketService } from './services/trackingSocketService';
 
 // Import Routes
 import authRoutes from './routes/auth';
@@ -24,6 +27,7 @@ import statsRoutes from './routes/stats';
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 5000;
 
 // Middleware
@@ -34,7 +38,7 @@ const allowedOrigins = [
   'http://localhost:3000'
 ].filter(Boolean) as string[];
 
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
@@ -57,10 +61,27 @@ app.use(cors({
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   credentials: true
+};
+
+app.use(cors(corsOptions));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
-app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
+
+// Initialize Socket.IO with identical CORS settings
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: corsOptions.origin as any,
+    credentials: true
+  },
+  pingTimeout: 30000,
+  pingInterval: 25000
+});
+
+// Initialize real-time live tracking socket service
+trackingSocketService.init(io);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -114,12 +135,13 @@ app.use('/api/stats', statsRoutes);
 app.use(errorHandler);
 
 // Connect to Database and start server
-connectDB().then(async () => {
-  // Verify email configuration at startup without exposing password
-  await verifyEmailConfig();
+connectDB().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server with Socket.IO is running on port ${PORT} (bound to 0.0.0.0)`);
+  });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT} (bound to 0.0.0.0)`);
+  // Verify email configuration asynchronously without delaying startup
+  verifyEmailConfig().catch((err: any) => {
+    console.warn('[EmailService] Background email verify warning:', err?.message);
   });
 });
-
