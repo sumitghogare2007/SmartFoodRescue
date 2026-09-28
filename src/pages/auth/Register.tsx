@@ -24,6 +24,19 @@ const Register = () => {
     city: 'Mumbai',
     pincode: '400001',
   });
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const captureLocation = () => {
+    if (!window.isSecureContext || !navigator.geolocation) { toast.error('Location capture requires HTTPS or localhost.'); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(position => {
+      setCoordinates({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+      setLocating(false);
+    }, error => {
+      toast.error(error.code === 1 ? 'Location permission denied. Please enable it in browser settings.' : 'Location unavailable. Please try again at your facility.');
+      setLocating(false);
+    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+  };
   const [showLocation, setShowLocation] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
@@ -47,7 +60,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await signUp(formData);
+      await signUp({ ...formData, ...(formData.userType !== 'VOLUNTEER' ? coordinates : {}) });
       toast.success('Registration successful! Welcome to SmartFoodRescue.');
       navigate('/dashboard');
     } catch (err: any) {
@@ -217,6 +230,11 @@ const Register = () => {
               </div>
             )}
 
+            {formData.userType !== 'VOLUNTEER' && <div className="p-3 bg-gray-50 border rounded-md text-sm">
+              <p>Capture location only while at your pickup facility or NGO destination. The address alone does not provide map coordinates.</p>
+              <button type="button" disabled={locating} onClick={captureLocation} className="mt-2 min-h-11 px-4 bg-emerald-700 text-white rounded">{locating ? 'Locating...' : 'Use this device’s location'}</button>
+              {coordinates && <p role="status">Facility coordinates captured.</p>}
+            </div>}
             {/* Optional Location Toggle */}
             <div className="pt-1">
               <button

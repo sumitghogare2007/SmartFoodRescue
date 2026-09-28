@@ -14,9 +14,12 @@
     "test:prod-reg": "ts-node scripts/test-registration-prod.ts",
     "test:smtp": "ts-node scripts/test-real-smtp-lifecycle.ts",
     "test:tracking": "ts-node scripts/test-realtime-tracking.ts",
-    "test:password-reset": "node scripts/test-forgot-password-lifecycle.js"
+    "test:password-reset": "node scripts/test-forgot-password-lifecycle.js",
+    "test:tracking:regressions": "node -r ts-node/register scripts/test-tracking-regressions.cjs",
+    "test:tracking:readonly": "node scripts/verify-tracking-readonly.cjs"
   },
   "dependencies": {
+    "axios": "^1.20.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",

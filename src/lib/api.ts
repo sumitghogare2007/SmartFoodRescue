@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const rawBaseUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000';
-const baseURL = rawBaseUrl.replace(/\/api\/?$/, '');
+const rawBaseUrl = (import.meta.env.VITE_API_URL as string)?.trim() || (import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin);
+export const baseURL = rawBaseUrl.replace(/\/api\/?$/, '');
 
 let inMemoryAuthToken: string | null = null;
 

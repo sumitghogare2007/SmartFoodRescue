@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { volunteerService } from '../../services/volunteerService';
 import { apiClient } from '../../lib/api';
 import type { Pickup, StatusHistoryEntry } from '../../types';
@@ -18,26 +18,15 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
-import { useDeviceGPS } from '../../hooks/useDeviceGPS';
+import { useNavigationGPS } from '../../context/NavigationContext';
 
 const VolunteerDashboard = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [historyMap, setHistoryMap] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [activeNavPickupId, setActiveNavPickupId] = useState<string | null>(null);
-
-  // Hook real device GPS (active when a pickup is in EN_ROUTE)
-  const {
-    currentLocation,
-    isWatching,
-    permissionStatus,
-    gpsError
-  } = useDeviceGPS({
-    pickupId: activeNavPickupId || undefined,
-    enabled: Boolean(activeNavPickupId),
-    onError: (err) => toast.error(err)
-  });
+  const navigate = useNavigate();
+  const { currentLocation, isWatching, permissionStatus, gpsError, setActiveNavPickupId } = useNavigationGPS();
 
   useEffect(() => {
     fetchPickups();
@@ -108,45 +97,21 @@ const VolunteerDashboard = () => {
         return;
       }
 
-      // Quick location sample if available
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            await apiClient.post(`/api/pickups/${id}/tracking/start`, {
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              accuracy: pos.coords.accuracy,
-              speed: pos.coords.speed,
-              heading: pos.coords.heading
-            });
-            setActiveNavPickupId(id);
-            toast.success('Live GPS navigation started! Coordinates broadcasting.');
-            await fetchPickups();
-          } catch (e: any) {
-            toast.error(e.response?.data?.message || 'Failed to start navigation');
-          } finally {
-            setActionLoading(null);
-          }
-        },
-        async (err) => {
-          // If immediate lock times out, still initiate session and let watcher connect
-          try {
-            await apiClient.post(`/api/pickups/${id}/tracking/start`, {});
-            setActiveNavPickupId(id);
-            toast.success('Live tracking activated. Acquiring GPS lock...');
-            await fetchPickups();
-          } catch (e: any) {
-            toast.error(e.response?.data?.message || err.message || 'Failed to start navigation');
-          } finally {
-            setActionLoading(null);
-          }
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
+      if (!window.isSecureContext) throw new Error('GPS requires HTTPS or localhost.');
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject,
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }));
+      await apiClient.post(`/api/pickups/${id}/tracking/start`, {
+        latitude: pos.coords.latitude, longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy, speed: pos.coords.speed === null ? null : pos.coords.speed * 3.6,
+        heading: pos.coords.heading, timestamp: pos.timestamp
+      });
+      setActiveNavPickupId(id);
+      navigate(`/tracking/${id}`);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to start navigation');
-      setActionLoading(null);
-    }
+      toast.error(err.code === 1 ? 'Location permission denied. Please allow location access in browser settings.' :
+        err.response?.data?.message || err.message || 'Failed to start navigation');
+    } finally { setActionLoading(null); }
   };
 
   // Arrived -> Moves to ARRIVED & turns off GPS tracking
@@ -328,11 +293,11 @@ const VolunteerDashboard = () => {
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
                           <span className="font-bold text-emerald-950 text-sm">
-                            🚚 Live Tracking Active
+                            🚚 {gpsError ? 'GPS unavailable' : currentLocation ? 'Navigation Active' : 'Waiting for GPS'}
                           </span>
                         </div>
                         <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-semibold">
-                          GPS: {isWatching ? 'Broadcasting Real-Time' : 'Connecting...'}
+                          GPS: {gpsError ? 'Unavailable' : isWatching && currentLocation ? 'Active' : 'Waiting'}
                         </span>
                       </div>
 

@@ -79,7 +79,6 @@ const App = () => {
 
                 <Route path="users" element={<UsersPage />} />
                 <Route path="tracking/:pickupId" element={<LiveTrackingPage />} />
-                <Route path="/tracking/:pickupId" element={<LiveTrackingPage />} />
 
                 <Route path="settings" element={<Settings />} />
               </Route>

@@ -6,7 +6,7 @@ export interface RouteCoordinates {
 }
 
 export interface RouteResult {
-  provider: 'google' | 'osrm' | 'fallback';
+  provider: 'google' | 'osrm';
   distanceMeters: number;
   distanceKm: number;
   durationSeconds: number;
@@ -83,14 +83,14 @@ class RoutingService {
 
   /**
    * Compute driving route between origin and destination.
-   * Primary: Google Routes API (when GOOGLE_MAPS_API_KEY is configured).
-   * Fallback: OSRM (for local/demo development).
+   * Default: OSRM. Google is opt-in via ROUTING_PROVIDER=google.
    */
   public async computeRoute(
     origin: RouteCoordinates,
     destination: RouteCoordinates,
     forceRecalculate = false
   ): Promise<RouteResult> {
+    if (process.env.TRACKING_DEBUG === 'true') console.info('[Routing] Route requested');
     const cacheKey = `${origin.latitude.toFixed(4)},${origin.longitude.toFixed(4)}->${destination.latitude.toFixed(4)},${destination.longitude.toFixed(4)}`;
     const now = Date.now();
 
@@ -109,7 +109,7 @@ class RoutingService {
       }
     }
 
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.ROUTING_PROVIDER === 'google' ? process.env.GOOGLE_MAPS_API_KEY : undefined;
 
     // 1. Primary: Google Routes API (Directions v2)
     if (apiKey) {
@@ -152,11 +152,8 @@ class RoutingService {
           // Duration format from Google Routes API: e.g. "450s"
           const durationSeconds = parseInt(String(route.duration || '0').replace('s', ''), 10) || 0;
           const encodedPolyline = route.polyline?.encodedPolyline || '';
-          const defaultCoords: [number, number][] = [
-            [origin.latitude, origin.longitude],
-            [destination.latitude, destination.longitude]
-          ];
-          const coordinates: [number, number][] = encodedPolyline ? decodeGooglePolyline(encodedPolyline) : defaultCoords;
+          if (!encodedPolyline) throw new Error('Route geometry missing');
+          const coordinates = decodeGooglePolyline(encodedPolyline);
 
           const result: RouteResult = {
             provider: 'google',
@@ -175,22 +172,24 @@ class RoutingService {
       } catch (googleError: any) {
         console.warn(
           '[RoutingService] Google Routes API request failed, falling back to OSRM:',
-          googleError?.response?.data || googleError?.message
+          googleError?.response?.status || 'request failed'
         );
       }
     }
 
-    // 2. Secondary Fallback: OSRM (Local / Demo / Fallback only)
+    // Default road provider; also the fallback for explicitly configured Google routing.
     try {
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
+      const osrmUrl = `${(process.env.OSRM_URL || 'https://router.project-osrm.org').replace(/\/$/, '')}/route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;
       const osrmRes = await axios.get(osrmUrl, { timeout: 5000 });
       const osrmRoute = osrmRes.data?.routes?.[0];
 
-      if (osrmRoute) {
+      if (osrmRes.data?.code === 'Ok' && osrmRoute?.geometry?.coordinates?.length >= 2 &&
+          Number.isFinite(osrmRoute.distance) && Number.isFinite(osrmRoute.duration)) {
         const distanceMeters = Math.round(osrmRoute.distance || 0);
         const durationSeconds = Math.round(osrmRoute.duration || 0);
         // OSRM coordinates are [lon, lat], convert to [lat, lon]
         const rawCoords: [number, number][] = osrmRoute.geometry?.coordinates || [];
+        if (!rawCoords.every(([lon, lat]) => Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) throw new Error('Invalid route geometry');
         const coordinates: [number, number][] = rawCoords.map(([lon, lat]) => [lat, lon]);
 
         const result: RouteResult = {
@@ -199,13 +198,11 @@ class RoutingService {
           distanceKm: Number((distanceMeters / 1000).toFixed(2)),
           durationSeconds,
           durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
-          coordinates: coordinates.length > 0 ? coordinates : [
-            [origin.latitude, origin.longitude],
-            [destination.latitude, destination.longitude]
-          ],
+          coordinates,
           destination
         };
 
+        if (process.env.TRACKING_DEBUG === 'true') console.info('[Routing] OSRM response received', { distanceMeters, durationSeconds });
         this.cache.set(cacheKey, { timestamp: now, result, origin });
         return result;
       }
@@ -216,33 +213,7 @@ class RoutingService {
       );
     }
 
-    // 3. Fallback: Straight-line Haversine approximation if all external APIs fail
-    const directMeters = Math.round(
-      haversineDistanceMeters(
-        origin.latitude,
-        origin.longitude,
-        destination.latitude,
-        destination.longitude
-      )
-    );
-    // Approximate driving distance = 1.35x straight-line, average city speed = 30 km/h (8.33 m/s)
-    const estimatedDistanceMeters = Math.round(directMeters * 1.35);
-    const estimatedSeconds = Math.round(estimatedDistanceMeters / 8.33);
-
-    const fallbackResult: RouteResult = {
-      provider: 'fallback',
-      distanceMeters: estimatedDistanceMeters,
-      distanceKm: Number((estimatedDistanceMeters / 1000).toFixed(2)),
-      durationSeconds: estimatedSeconds,
-      durationMinutes: Math.max(1, Math.round(estimatedSeconds / 60)),
-      coordinates: [
-        [origin.latitude, origin.longitude],
-        [destination.latitude, destination.longitude]
-      ] as [number, number][],
-      destination
-    };
-
-    return fallbackResult;
+    throw Object.assign(new Error('Road routing service is unavailable. Please retry.'), { statusCode: 503 });
   }
 
   /**

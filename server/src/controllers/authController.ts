@@ -48,8 +48,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         area: locData.area || roleData.area || 'Downtown',
         city: locData.city || roleData.city || 'Mumbai',
         pincode: locData.pincode || roleData.pincode || '400001',
-        latitude: locData.latitude || roleData.latitude || 19.076,
-        longitude: locData.longitude || roleData.longitude || 72.8777
+        latitude: locData.latitude ?? roleData.latitude,
+        longitude: locData.longitude ?? roleData.longitude
       });
       await location.save();
 
@@ -71,8 +71,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         area: locData.area || roleData.area || 'District 1',
         city: locData.city || roleData.city || 'Mumbai',
         pincode: locData.pincode || roleData.pincode || '400001',
-        latitude: locData.latitude || roleData.latitude || 19.076,
-        longitude: locData.longitude || roleData.longitude || 72.8777
+        latitude: locData.latitude ?? roleData.latitude,
+        longitude: locData.longitude ?? roleData.longitude
       });
       await location.save();
 

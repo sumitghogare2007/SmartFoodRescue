@@ -19,6 +19,26 @@ import toast from 'react-hot-toast';
 const Settings: React.FC = () => {
   const { authUser, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const [locating, setLocating] = useState(false);
+  const saveFacilityLocation = async () => {
+    setLocating(true);
+    try {
+      if (!window.isSecureContext || !navigator.geolocation) throw new Error('Location capture requires HTTPS or localhost.');
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject,
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }));
+      const role = authUser?.userType === 'DONOR' ? 'donors' : 'ngos';
+      const profile = (await apiClient.get(`/api/${role}/me`)).data;
+      const id = typeof profile.locationId === 'string' ? profile.locationId : profile.locationId?._id;
+      if (!id) throw new Error('Facility location record is missing. Please contact an administrator.');
+      await apiClient.put(`/api/locations/${id}/coordinates`, {
+        latitude: position.coords.latitude, longitude: position.coords.longitude, timestamp: position.timestamp
+      });
+      toast.success('Facility coordinates saved. Reopen tracking to load the updated destination.');
+    } catch (error: any) {
+      toast.error(error.code === 1 ? 'Location permission denied. Please enable it in browser settings.' :
+        error.response?.data?.message || error.message || 'Could not save facility coordinates.');
+    } finally { setLocating(false); }
+  };
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -77,6 +97,11 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Section 1: Appearance / Theme */}
+      {['DONOR', 'NGO'].includes(authUser?.userType || '') && <div className="p-5 bg-white dark:bg-gray-800 border rounded-lg space-y-3">
+        <h2 className="font-bold">Facility map location</h2>
+        <p className="text-sm">Use this only while physically at your pickup facility or NGO destination. This updates the coordinates used for delivery routing.</p>
+        <button onClick={saveFacilityLocation} disabled={locating} className="min-h-12 px-5 bg-emerald-700 text-white rounded-lg">{locating ? 'Locating...' : 'Save this device’s location as my facility'}</button>
+      </div>}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
           <div>

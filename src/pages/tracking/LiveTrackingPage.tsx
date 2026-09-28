@@ -1,3 +1,5 @@
+import { useNavigationGPS } from '../../context/NavigationContext';
+import { hasCoordinates } from '../../lib/coordinates';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../../lib/api';
@@ -20,6 +22,17 @@ import toast from 'react-hot-toast';
 export const LiveTrackingPage: React.FC = () => {
   const { pickupId } = useParams<{ pickupId: string }>();
   const navigate = useNavigate();
+  const gps = useNavigationGPS();
+  const [stopping, setStopping] = useState(false);
+  const arrive = async () => {
+    setStopping(true);
+    try {
+      await apiClient.post(`/api/pickups/${pickupId}/tracking/stop`);
+      gps.stopWatching(); gps.setActiveNavPickupId(null);
+      setDetails(current => current ? { ...current, pickupStatus: 'ARRIVED' } : current);
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Could not mark arrival. Please retry.'); }
+    finally { setStopping(false); }
+  };
 
   const [details, setDetails] = useState<PickupTrackingDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -47,24 +60,26 @@ export const LiveTrackingPage: React.FC = () => {
     fetchTrackingData();
   }, [pickupId]);
 
-  const destCoords = details?.destinationNgo?.location
+  const destCoords = hasCoordinates(details?.destinationNgo?.location)
     ? {
-        latitude: details.destinationNgo.location.latitude || 19.076,
-        longitude: details.destinationNgo.location.longitude || 72.8777
+        latitude: details.destinationNgo.location.latitude,
+        longitude: details.destinationNgo.location.longitude
       }
     : null;
 
   const {
     liveLocation,
+    trackingStatus,
     route,
     connectionStatus,
     lastUpdatedText,
-    isStale,
+    isStale, errorMessage,
     refreshRoute
   } = useLiveTracking({
     pickupId: pickupId || '',
     destinationCoords: destCoords,
-    initialLiveLocation: details?.liveLocation
+    initialLiveLocation: details?.liveLocation,
+    pickupStatus: details?.pickupStatus
   });
 
   if (loading) {
@@ -94,23 +109,23 @@ export const LiveTrackingPage: React.FC = () => {
     );
   }
 
-  const pickupPoint = {
-    latitude: details.donor?.location?.latitude || 19.1197,
-    longitude: details.donor?.location?.longitude || 72.8464,
+  const pickupPoint = hasCoordinates(details.donor?.location) ? {
+    latitude: details.donor?.location?.latitude,
+    longitude: details.donor?.location?.longitude,
     name: details.donor?.name || 'Origin Food Donor',
     address: details.donor?.location?.address
       ? `${details.donor.location.address}, ${details.donor.location.area || ''}`
       : 'Pickup Address on file'
-  };
+  } : null;
 
-  const destPoint = {
-    latitude: details.destinationNgo?.location?.latitude || 19.076,
-    longitude: details.destinationNgo?.location?.longitude || 72.8777,
+  const destPoint = hasCoordinates(details.destinationNgo?.location) ? {
+    latitude: details.destinationNgo?.location?.latitude,
+    longitude: details.destinationNgo?.location?.longitude,
     name: details.destinationNgo?.name || 'Delivery Destination (NGO)',
     address: details.destinationNgo?.location?.address
       ? `${details.destinationNgo.location.address}, ${details.destinationNgo.location.area || ''}`
       : 'NGO Facility Address on file'
-  };
+  } : null;
 
   const volunteerPoint = liveLocation
     ? {
@@ -124,6 +139,10 @@ export const LiveTrackingPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {gps.activeNavPickupId === pickupId && <div className="p-4 bg-emerald-50 rounded-lg flex flex-wrap justify-between gap-3">
+        <span role="status">GPS: {gps.gpsError || (gps.currentLocation ? 'Active' : 'Waiting for device location...')}</span>
+        <button onClick={arrive} disabled={stopping} className="min-h-12 px-6 bg-purple-700 text-white rounded-lg">{stopping ? 'Saving arrival...' : 'Arrived'}</button>
+      </div>}
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-xs border border-gray-200">
         <div className="flex items-center gap-3">
@@ -140,7 +159,7 @@ export const LiveTrackingPage: React.FC = () => {
                 Live Rescue Tracking #{details.pickupId.slice(-6)}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                {details.pickupStatus}
+                {trackingStatus || details.pickupStatus}
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
@@ -189,6 +208,7 @@ export const LiveTrackingPage: React.FC = () => {
         </div>
       </div>
 
+      {errorMessage && <p role="alert" className="text-red-700">{errorMessage}</p>}
       {/* Main Grid: Map & Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -230,7 +250,7 @@ export const LiveTrackingPage: React.FC = () => {
           <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg text-xs text-blue-800 flex items-start gap-2">
             <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <p>
-              <strong>Active Navigation Scope:</strong> GPS coordinates update in real time while the volunteer's mobile browser tracking page remains active. If the device screen turns off or the browser is minimized, coordinates resume immediately upon reopening.
+              <strong>Active Navigation Scope:</strong> GPS coordinates update in real time while the volunteer's mobile browser tracking page remains active. If the device screen turns off or the browser is minimized, check GPS and connection status when you return.
             </p>
           </div>
         </div>

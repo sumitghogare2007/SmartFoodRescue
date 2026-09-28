@@ -1,3 +1,4 @@
+import { validateLocation } from './trackingValidation';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
@@ -35,7 +36,7 @@ export interface VerificationResult {
 }
 
 export async function verifyPickupAccess(user: IUser, pickupId: string): Promise<VerificationResult> {
-  if (!mongoose.Types.ObjectId.isValid(pickupId)) {
+  if (typeof pickupId !== 'string' || !mongoose.Types.ObjectId.isValid(pickupId)) {
     return { authorized: false, isVolunteer: false, reason: 'Invalid pickup ID format' };
   }
 
@@ -55,10 +56,9 @@ export async function verifyPickupAccess(user: IUser, pickupId: string): Promise
 
   // 1. Admin is always authorized
   if (user.userType === 'ADMIN') {
-    return { authorized: true, isVolunteer: true, pickup };
+    return { authorized: true, isVolunteer: false, pickup };
   }
 
-  const userIdStr = user._id.toString();
 
   // 2. Assigned Volunteer check
   if (user.userType === 'VOLUNTEER') {
@@ -143,9 +143,12 @@ class TrackingSocketService {
 
     this.io.on('connection', (socket: AuthenticatedSocket) => {
       const user = socket.data.user;
+      if (process.env.TRACKING_DEBUG === 'true') console.info('[Tracking] Socket connected and authenticated');
 
       // Join pickup tracking room
-      socket.on('join:pickup', async ({ pickupId }: { pickupId: string }) => {
+      socket.on('join:pickup', async (payload: any) => {
+        const pickupId = payload?.pickupId;
+        try {
         if (!user) {
           socket.emit('tracking:error', { message: 'Not authenticated' });
           return;
@@ -161,7 +164,8 @@ class TrackingSocketService {
         }
 
         const roomName = `pickup:${pickupId}`;
-        socket.join(roomName);
+        await socket.join(roomName);
+        if (process.env.TRACKING_DEBUG === 'true') console.info('[Tracking] Joined pickup room');
 
         // Fetch latest known live location and emit to this subscriber
         const latestLocation = await PickupLiveLocation.findOne({ pickupId }).lean();
@@ -171,41 +175,27 @@ class TrackingSocketService {
           latestLocation: latestLocation || null,
           pickupStatus: verification.pickup?.pickupStatus
         });
+        } catch { socket.emit('tracking:error', { pickupId, message: 'Unable to join pickup tracking. Please retry.' }); }
       });
 
       // Leave pickup tracking room
-      socket.on('leave:pickup', ({ pickupId }: { pickupId: string }) => {
+      socket.on('leave:pickup', (payload: any) => {
+        const pickupId = payload?.pickupId;
         socket.leave(`pickup:${pickupId}`);
         socket.emit('tracking:left', { pickupId });
       });
 
       // Volunteer emits real location update
       socket.on('location:update', async (payload: LocationPayload) => {
+        try {
         if (!user) {
           socket.emit('tracking:error', { message: 'Not authenticated' });
           return;
         }
 
+        const validationError = validateLocation(payload);
+        if (validationError) { socket.emit('tracking:error', { pickupId: payload?.pickupId, message: validationError }); return; }
         const { pickupId, latitude, longitude, accuracy, speed, heading, timestamp } = payload;
-
-        // 1. Strict Coordinate Boundary Validation
-        if (
-          typeof latitude !== 'number' ||
-          typeof longitude !== 'number' ||
-          latitude < -90 ||
-          latitude > 90 ||
-          longitude < -180 ||
-          longitude > 180 ||
-          isNaN(latitude) ||
-          isNaN(longitude)
-        ) {
-          socket.emit('tracking:error', {
-            pickupId,
-            message: 'Invalid GPS coordinates. Latitude [-90, 90], Longitude [-180, 180].'
-          });
-          return;
-        }
-
         // 2. Authorization Check: Only assigned volunteer or admin can update location
         const verification = await verifyPickupAccess(user, pickupId);
         if (!verification.authorized || !verification.isVolunteer) {
@@ -216,17 +206,21 @@ class TrackingSocketService {
           return;
         }
 
+        if (verification.pickup?.pickupStatus !== 'EN_ROUTE') {
+          socket.emit('tracking:error', { pickupId, message: 'Tracking is not active for this pickup.' }); return;
+        }
         const volunteerId = verification.volunteerId || (verification.pickup?.volunteerId as any)?._id;
         const locationTime = timestamp ? new Date(timestamp) : new Date();
 
         try {
           // 3. Upsert single PickupLiveLocation document
           let activeLive = await PickupLiveLocation.findOne({ pickupId });
-          const trackingSessionId =
-            activeLive?.trackingSessionId || `session_${pickupId}_${Date.now()}`;
+          if (!activeLive || activeLive.status !== 'ACTIVE') return;
+          if (locationTime <= activeLive.updatedAt) return;
+          const trackingSessionId = activeLive.trackingSessionId;
 
           activeLive = await PickupLiveLocation.findOneAndUpdate(
-            { pickupId },
+            { pickupId, status: 'ACTIVE', updatedAt: { $lt: locationTime } },
             {
               $set: {
                 trackingSessionId,
@@ -240,9 +234,10 @@ class TrackingSocketService {
                 updatedAt: locationTime
               }
             },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
+            { new: true, runValidators: true, timestamps: false }
           );
 
+          if (!activeLive) return;
           // 4. Throttled History Breadcrumb recording (e.g. at least 15s or 25m movement)
           const lastWrite = this.lastHistoryWrite.get(pickupId);
           const nowMs = Date.now();
@@ -290,14 +285,16 @@ class TrackingSocketService {
           };
 
           this.io?.to(`pickup:${pickupId}`).emit('volunteer:location', broadcastPayload);
+          if (process.env.TRACKING_DEBUG === 'true') console.info('[Tracking] Location saved and broadcast');
         } catch (dbError: any) {
           console.error('[TrackingSocket] Failed to persist live location:', dbError);
           socket.emit('tracking:error', { pickupId, message: 'Failed to record location update' });
         }
+        } catch { socket.emit('tracking:error', { pickupId: payload?.pickupId, message: 'Unable to process GPS update.' }); }
       });
 
       socket.on('disconnect', () => {
-        // Socket disconnected
+        if (process.env.TRACKING_DEBUG === 'true') console.info('[Tracking] Socket disconnected');
       });
     });
   }

@@ -1,7 +1,7 @@
 import { apiClient } from '../lib/api';
 
 export interface RouteData {
-  provider: 'google' | 'osrm' | 'fallback';
+  provider: 'google' | 'osrm';
   distanceMeters: number;
   distanceKm: number;
   durationSeconds: number;
@@ -41,6 +41,9 @@ export function calculateHaversineDistance(
 
 class RoutingClientService {
   private routeCache: Map<string, { route: RouteData; timestamp: number; origin: Coordinates }> = new Map();
+  private failures = new Map<string, unknown>();
+  private pending = new Map<string, Promise<RouteData | null>>();
+  private attempts = new Map<string, number>();
   private readonly MIN_RECALCULATE_INTERVAL_MS = 25000; // 25s minimum between routing calls
   private readonly MEANINGFUL_MOVEMENT_METERS = 200; // 200m movement required for automatic recalculation
 
@@ -48,7 +51,14 @@ class RoutingClientService {
    * Request route calculation from the decoupled backend routing service.
    * Will only trigger an API call if no valid cache exists, or force is true, or meaningful movement occurred.
    */
-  public async getRoute(
+  public getRoute(pickupId: string, currentLocation?: Coordinates | null, force = false): Promise<RouteData | null> {
+    const pending = this.pending.get(pickupId);
+    if (pending) return pending;
+    const request = this.fetchRoute(pickupId, currentLocation, force).finally(() => this.pending.delete(pickupId));
+    this.pending.set(pickupId, request);
+    return request;
+  }
+  private async fetchRoute(
     pickupId: string,
     currentLocation?: Coordinates | null,
     force = false
@@ -71,6 +81,12 @@ class RoutingClientService {
       }
     }
 
+    const lastAttempt = this.attempts.get(pickupId) || 0;
+    if (!force && now - lastAttempt < this.MIN_RECALCULATE_INTERVAL_MS) {
+      if (this.failures.has(pickupId)) throw this.failures.get(pickupId);
+      return cached?.route || null;
+    }
+    this.attempts.set(pickupId, now);
     try {
       const params: any = {};
       if (currentLocation) {
@@ -83,19 +99,23 @@ class RoutingClientService {
 
       const res = await apiClient.get(`/api/pickups/${pickupId}/route`, { params });
       const route: RouteData = res.data;
+      this.failures.delete(pickupId);
 
-      if (currentLocation) {
+      const origin = currentLocation || (route.coordinates[0] ? { latitude: route.coordinates[0][0], longitude: route.coordinates[0][1] } : null);
+      if (origin) {
         this.routeCache.set(pickupId, {
           route,
           timestamp: now,
-          origin: currentLocation
+          origin
         });
       }
 
       return route;
     } catch (err: any) {
       console.warn('[RoutingClient] Failed to fetch route:', err?.message || err);
-      return cached ? cached.route : null;
+      this.failures.set(pickupId, err);
+      this.routeCache.delete(pickupId);
+      throw err;
     }
   }
 

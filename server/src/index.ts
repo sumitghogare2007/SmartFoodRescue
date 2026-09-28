@@ -32,7 +32,7 @@ const PORT = Number(process.env.PORT) || 5000;
 
 // Middleware
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URL || '').split(',').map(value => value.trim().replace(/\/$/, '')),
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000'
@@ -48,10 +48,10 @@ const corsOptions: cors.CorsOptions = {
       return callback(null, true);
     }
 
-    // Allow configured origins or any Vercel deployment (*.vercel.app)
+    // Allow only explicitly configured production frontend origins.
     try {
-      const hostname = new URL(origin).hostname;
-      if (allowedOrigins.includes(origin) || hostname.endsWith('.vercel.app')) {
+      new URL(origin);
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
     } catch {

@@ -1,3 +1,5 @@
+import { verifyPickupAccess, trackingSocketService } from '../services/trackingSocketService';
+import PickupLiveLocation from '../models/PickupLiveLocation';
 import { Request, Response, NextFunction } from 'express';
 import Pickup from '../models/Pickup';
 import PickupTracking from '../models/PickupTracking';
@@ -142,6 +144,9 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 export const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status, note } = req.body;
+    const access = await verifyPickupAccess(req.user, req.params.id);
+    if (!access.authorized) return res.status(403).json({ message: 'Unauthorized for this pickup.' });
+    if (status === 'EN_ROUTE') return res.status(400).json({ message: 'Use Start Navigation with device GPS.' });
     const pickup = await Pickup.findById(req.params.id).populate('requestId');
     if (!pickup) return res.status(404).json({ message: 'Pickup not found' });
 
@@ -173,6 +178,10 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
     pickup.statusHistory.push(historyEntry);
     await pickup.save();
 
+    if (['ARRIVED', 'DELIVERED', 'DISTRIBUTED'].includes(status)) {
+      await PickupLiveLocation.updateOne({ pickupId: pickup._id }, { $set: { status: 'ARRIVED' } });
+      trackingSocketService.emitToPickupRoom(String(pickup._id), 'tracking:stopped', { pickupId: String(pickup._id), status });
+    }
     // Create record in dedicated pickupTracking collection
     const tracking = new PickupTracking({
       pickupId: pickup._id,

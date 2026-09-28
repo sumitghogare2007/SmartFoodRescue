@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Pickup from '../models/Pickup';
 import PickupTracking from '../models/PickupTracking';
 import PickupLiveLocation from '../models/PickupLiveLocation';
-import PickupLocationHistory from '../models/PickupLocationHistory';
+import { validateLocation } from '../services/trackingValidation';
 import { verifyPickupAccess } from '../services/trackingSocketService';
 import { routingService } from '../services/routingService';
 import { eventService } from '../services/eventService';
@@ -32,6 +32,11 @@ export const startTracking = async (req: Request, res: Response, next: NextFunct
       });
     }
 
+    const validationError = validateLocation(req.body);
+    if (validationError) return res.status(400).json({ message: validationError });
+
+    const otherActive = await Pickup.exists({ volunteerId: access.volunteerId, pickupStatus: 'EN_ROUTE', _id: { $ne: pickup._id } });
+    if (otherActive) return res.status(409).json({ message: 'Finish the current navigation before starting another pickup.' });
     const trackingSessionId = `sess_${pickup._id}_${Date.now()}`;
     const volunteerId = access.volunteerId || (pickup.volunteerId as any)?._id || pickup.volunteerId;
 
@@ -79,7 +84,7 @@ export const startTracking = async (req: Request, res: Response, next: NextFunct
             : {})
         }
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     );
 
     // Broadcast through Socket.IO and SSE
@@ -90,6 +95,9 @@ export const startTracking = async (req: Request, res: Response, next: NextFunct
       startedAt: new Date().toISOString()
     });
 
+    if (liveRecord) trackingSocketService.emitToPickupRoom(pickupId, 'volunteer:location', {
+      ...liveRecord.toObject(), pickupId, timestamp: liveRecord.updatedAt.toISOString()
+    });
     eventService.broadcast('pickup:updated', { pickupId: pickup._id, status: 'EN_ROUTE' });
 
     res.json({
@@ -197,7 +205,7 @@ export const getLiveTracking = async (req: Request, res: Response, next: NextFun
           {
             path: 'donationId',
             populate: [
-              { path: 'donorId', populate: 'userId' },
+              { path: 'donorId', populate: ['userId', 'locationId'] },
               { path: 'locationId' }
             ]
           },
@@ -287,7 +295,7 @@ export const getPickupRoute = async (req: Request, res: Response, next: NextFunc
     const pickup = await Pickup.findById(pickupId).populate({
       path: 'requestId',
       populate: [
-        { path: 'donationId', populate: 'locationId' },
+        { path: 'donationId', populate: [{ path: 'locationId' }, { path: 'donorId', populate: 'locationId' }] },
         { path: 'ngoId', populate: 'locationId' }
       ]
     });
@@ -296,11 +304,12 @@ export const getPickupRoute = async (req: Request, res: Response, next: NextFunc
 
     const reqObj = pickup.requestId as any;
     const donation = reqObj?.donationId as any;
-    const donorLoc = donation?.locationId as any;
+    const donorLoc = (donation?.locationId || donation?.donorId?.locationId) as any;
     const ngoLoc = reqObj?.ngoId?.locationId as any;
 
-    const destLat = ngoLoc?.latitude || 19.076;
-    const destLng = ngoLoc?.longitude || 72.8777;
+    const destLat = ngoLoc?.latitude;
+    const destLng = ngoLoc?.longitude;
+    if (validateLocation({ latitude: destLat, longitude: destLng })) return res.status(422).json({ message: 'NGO destination location is unavailable.' });
 
     // Origin: provided by query, or from PickupLiveLocation, or from donor location
     let originLat = Number(req.query.lat);
@@ -312,11 +321,12 @@ export const getPickupRoute = async (req: Request, res: Response, next: NextFunc
         originLat = live.latitude;
         originLng = live.longitude;
       } else {
-        originLat = donorLoc?.latitude || 19.1197;
-        originLng = donorLoc?.longitude || 72.8464;
+        originLat = donorLoc?.latitude;
+        originLng = donorLoc?.longitude;
       }
     }
 
+    if (validateLocation({ latitude: originLat, longitude: originLng })) return res.status(422).json({ message: 'Pickup coordinates unavailable.' });
     const routeResult = await routingService.computeRoute(
       { latitude: originLat, longitude: originLng },
       { latitude: destLat, longitude: destLng },
@@ -335,30 +345,25 @@ export const updateLocationHttp = async (req: Request, res: Response, next: Next
     const user = req.user;
     const { latitude, longitude, accuracy, speed, heading, timestamp } = req.body;
 
-    if (
-      typeof latitude !== 'number' ||
-      typeof longitude !== 'number' ||
-      latitude < -90 ||
-      latitude > 90 ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      return res.status(400).json({ message: 'Invalid latitude or longitude coordinates' });
-    }
+    const validationError = validateLocation(req.body);
+    if (validationError) return res.status(400).json({ message: validationError });
 
     const access = await verifyPickupAccess(user, pickupId);
     if (!access.authorized || !access.isVolunteer) {
       return res.status(403).json({ message: 'Unauthorized to update location' });
     }
 
-    const volunteerId = access.volunteerId || (access.pickup?.volunteerId as any)?._id;
+    if (access.pickup?.pickupStatus !== 'EN_ROUTE') return res.status(409).json({ message: 'Tracking is not active for this pickup.' });
+    const volunteerId = access.volunteerId;
     const locationTime = timestamp ? new Date(timestamp) : new Date();
 
     let activeLive = await PickupLiveLocation.findOne({ pickupId });
-    const trackingSessionId = activeLive?.trackingSessionId || `session_${pickupId}_${Date.now()}`;
+    if (!activeLive || activeLive.status !== 'ACTIVE') return res.status(409).json({ message: 'Start navigation before sending GPS.' });
+    if (locationTime <= activeLive.updatedAt) return res.json({ success: true, liveLocation: activeLive });
+    const trackingSessionId = activeLive.trackingSessionId;
 
     activeLive = await PickupLiveLocation.findOneAndUpdate(
-      { pickupId },
+      { pickupId, status: 'ACTIVE', updatedAt: { $lt: locationTime } },
       {
         $set: {
           trackingSessionId,
@@ -372,9 +377,10 @@ export const updateLocationHttp = async (req: Request, res: Response, next: Next
           updatedAt: locationTime
         }
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { new: true, runValidators: true, timestamps: false }
     );
 
+    if (!activeLive) return res.status(409).json({ message: 'Tracking stopped or a newer GPS sample was received.' });
     // Broadcast to room
     trackingSocketService.emitToPickupRoom(pickupId, 'volunteer:location', {
       pickupId,

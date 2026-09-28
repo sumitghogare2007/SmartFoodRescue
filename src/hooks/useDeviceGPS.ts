@@ -33,6 +33,8 @@ export const useDeviceGPS = ({
   const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt' | 'unsupported'>('prompt');
   const [gpsError, setGpsError] = useState<string | null>(null);
 
+  const callbacks = useRef({ onLocationUpdate, onError });
+  useEffect(() => { callbacks.current = { onLocationUpdate, onError }; }, [onLocationUpdate, onError]);
   const watchIdRef = useRef<number | null>(null);
   const lastEmitTimeRef = useRef<number>(0);
   const lastEmittedLocationRef = useRef<DeviceLocation | null>(null);
@@ -79,7 +81,7 @@ export const useDeviceGPS = ({
       }
 
       // Throttle GPS updates to Socket.IO server: 2.5–5s and filter jitter
-      if (elapsed >= throttleIntervalMs && hasMovedSignificantly) {
+      if (elapsed >= throttleIntervalMs && (hasMovedSignificantly || elapsed >= 10000)) {
         lastEmitTimeRef.current = now;
         lastEmittedLocationRef.current = loc;
 
@@ -95,12 +97,10 @@ export const useDeviceGPS = ({
           });
         }
 
-        if (onLocationUpdate) {
-          onLocationUpdate(loc);
-        }
+        callbacks.current.onLocationUpdate?.(loc);
       }
     },
-    [pickupId, throttleIntervalMs, minMovementMeters, onLocationUpdate]
+    [pickupId, throttleIntervalMs, minMovementMeters]
   );
 
   const handlePositionError = useCallback(
@@ -119,21 +119,24 @@ export const useDeviceGPS = ({
           break;
       }
       setGpsError(message);
-      if (onError) onError(message);
+      callbacks.current.onError?.(message);
     },
-    [onError]
+    []
   );
 
   const startWatching = useCallback(() => {
-    if (!('geolocation' in navigator)) {
-      const msg = 'Geolocation is not supported by your browser.';
+    if (!window.isSecureContext || !('geolocation' in navigator)) {
+      const msg = 'GPS requires HTTPS (or localhost) and a browser with location support.';
       setPermissionStatus('unsupported');
       setGpsError(msg);
-      if (onError) onError(msg);
+      callbacks.current.onError?.(msg);
       return;
     }
 
     stopWatching();
+    lastEmitTimeRef.current = 0;
+    lastEmittedLocationRef.current = null;
+    setCurrentLocation(null);
 
     try {
       const id = navigator.geolocation.watchPosition(
@@ -141,8 +144,8 @@ export const useDeviceGPS = ({
         handlePositionError,
         {
           enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
+          timeout: 10000,
+          maximumAge: 2000
         }
       );
       watchIdRef.current = id;
@@ -151,7 +154,7 @@ export const useDeviceGPS = ({
     } catch (e: any) {
       setGpsError('Failed to start GPS watcher: ' + e.message);
     }
-  }, [handlePositionSuccess, handlePositionError, stopWatching, onError]);
+  }, [handlePositionSuccess, handlePositionError, stopWatching]);
 
   useEffect(() => {
     if (enabled) {

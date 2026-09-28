@@ -1,3 +1,4 @@
+import { hasCoordinates } from '../../lib/coordinates';
 import React from 'react';
 import { Modal } from '../ui/Modal';
 import { LiveTrackingMap } from './LiveTrackingMap';
@@ -21,10 +22,10 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const destCoords = details?.destinationNgo?.location
+  const destCoords = hasCoordinates(details?.destinationNgo?.location)
     ? {
-        latitude: details.destinationNgo.location.latitude || 19.076,
-        longitude: details.destinationNgo.location.longitude || 72.8777
+        latitude: details.destinationNgo.location.latitude,
+        longitude: details.destinationNgo.location.longitude
       }
     : null;
 
@@ -33,27 +34,28 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
     route,
     connectionStatus,
     lastUpdatedText,
-    isStale
+    isStale, errorMessage
   } = useLiveTracking({
     pickupId: isOpen && pickupId ? pickupId : '',
     destinationCoords: destCoords,
-    initialLiveLocation: details?.liveLocation
+    initialLiveLocation: details?.liveLocation,
+    pickupStatus: details?.pickupStatus
   });
 
   if (!isOpen || !pickupId) return null;
 
-  const pickupPoint = details?.donor?.location
+  const pickupPoint = hasCoordinates(details?.donor?.location)
     ? {
-        latitude: details.donor.location.latitude || 19.1197,
-        longitude: details.donor.location.longitude || 72.8464,
+        latitude: details.donor.location.latitude,
+        longitude: details.donor.location.longitude,
         name: details.donor.name
       }
     : null;
 
-  const destPoint = details?.destinationNgo?.location
+  const destPoint = hasCoordinates(details?.destinationNgo?.location)
     ? {
-        latitude: details.destinationNgo.location.latitude || 19.076,
-        longitude: details.destinationNgo.location.longitude || 72.8777,
+        latitude: details.destinationNgo.location.latitude,
+        longitude: details.destinationNgo.location.longitude,
         name: details.destinationNgo.name
       }
     : null;
@@ -126,6 +128,7 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
           </div>
         </div>
 
+        {errorMessage && <p role="alert" className="text-red-700">{errorMessage}</p>}
         {/* Map View */}
         <LiveTrackingMap
           volunteerLocation={volunteerPoint}
@@ -133,6 +136,8 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({
           destinationLocation={destPoint}
           route={route}
           className="h-80 w-full rounded-lg"
+          connectionStatus={connectionStatus}
+          isStale={isStale}
           autoCenter={Boolean(volunteerPoint)}
         />
 
