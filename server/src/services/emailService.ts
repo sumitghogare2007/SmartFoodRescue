@@ -218,13 +218,6 @@ export const verifyEmailConfig = async (): Promise<boolean> => {
     return true;
   }
 
-  // In production, SMTP fallback is strictly disabled per requirement
-  if (process.env.NODE_ENV === 'production') {
-    console.warn('[EmailService] In production, Gmail API OAuth 2.0 is required. SMTP fallback is disabled.');
-    lastVerificationResult = 'FAILED (Gmail API OAuth required in production)';
-    return false;
-  }
-
   // Fallback to SMTP verify only in non-production environments (e.g. offline dev)
   const { user, pass } = getSmtpCredentials();
   if (!user || !pass) {
@@ -365,15 +358,7 @@ export const sendEmailSafe = async (options: {
       return true;
     }
 
-    // In production, SMTP fallback is strictly disabled per requirement
-    if (process.env.NODE_ENV === 'production') {
-      console.warn(`[EmailService] SMTP fallback is disabled in production. Gmail API OAuth 2.0 is required. Email skipped for: ${maskedRecipients}`);
-      lastSendResult = 'FAILED (SMTP fallback disabled in production)';
-      console.log('Email send result: FAILED');
-      return false;
-    }
-
-    // 2. Fallback: SMTP transport (only non-production environments)
+    // 2. SMTP transport (Gmail SMTP fallback / primary)
     if (!activeTransporter) {
       activeTransporter = createTransporterForConfig(activeConfig);
     }

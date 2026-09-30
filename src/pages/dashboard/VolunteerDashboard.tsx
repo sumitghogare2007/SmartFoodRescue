@@ -19,6 +19,7 @@ import {
 import toast from 'react-hot-toast';
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
 import { useNavigationGPS } from '../../context/NavigationContext';
+import DashboardHero from '../../components/dashboard/DashboardHero';
 
 const VolunteerDashboard = () => {
   const [pickups, setPickups] = useState<Pickup[]>([]);
@@ -140,26 +141,34 @@ const VolunteerDashboard = () => {
   const activePickups = pickups.filter(p => !['DELIVERED', 'DISTRIBUTED'].includes(p.pickupStatus));
   const completedPickups = pickups.filter(p => ['DELIVERED', 'DISTRIBUTED'].includes(p.pickupStatus));
 
+  const completionRate = pickups.length > 0 ? Math.round((completedPickups.length / pickups.length) * 100) : 100;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">Volunteer Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">View your assigned pickups and transmit live rescue navigation</p>
-        </div>
-      </div>
+      {/* Soft Mint Hero Centerpiece */}
+      <DashboardHero
+        pillText="VOLUNTEER FLEET DESK"
+        titlePrefix="Deliver surplus food"
+        titleAccent="without the clutter."
+        subtitle="Navigate real-time green corridors, securely verify food transfers, and eliminate hunger in local communities."
+        statNumber={activePickups.length}
+        statLabel="Active Routes"
+        statSubtext={`${completedPickups.length} completed of ${pickups.length} total deliveries`}
+        progressPercent={completionRate}
+      />
 
-      <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 flex items-center">
-            <Truck className="w-4 h-4 mr-2 text-[#166534]" />
+      <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl border border-white/90 dark:border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(18,184,176,0.06)] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#D2EBE6]/70 dark:border-white/10 bg-[#F8FCFB]/80 dark:bg-slate-800/60 flex justify-between items-center">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center">
+            <Truck className="w-4 h-4 mr-2 text-[#12B8B0]" />
             Active Assigned Pickups ({activePickups.length})
           </h2>
+          <span className="text-xs text-[#0F766E] dark:text-teal-300 font-semibold bg-[#E1F6F3] dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-[#BCE8E2] dark:border-teal-800/40">Live fleet dispatch</span>
         </div>
 
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-[#D2EBE6]/50 dark:divide-white/10">
           {activePickups.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 text-sm">
+            <div className="p-8 text-center text-slate-400 dark:text-slate-400 text-sm">
               No active pickups currently assigned to you.
             </div>
           ) : (
@@ -275,7 +284,7 @@ const VolunteerDashboard = () => {
                       )}
 
                       {/* Live Tracking Page Link */}
-                      {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(pickup.pickupStatus) && (
+                      {!['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
                         <Link
                           to={`/tracking/${pickup._id}`}
                           className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold flex items-center gap-1 transition"

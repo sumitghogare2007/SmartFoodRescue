@@ -2,35 +2,115 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Professional civic/NGO platform base styles */
+/* Soft Mint / Aqua Glassmorphism Theme Variables */
+:root {
+  --mint-bg-main: #EAF7F5;
+  --mint-bg-secondary: #D9F3EF;
+  --mint-accent: #12B8B0;
+  --mint-accent-hover: #0EA29B;
+  --mint-accent-soft: #E1F6F3;
+  --mint-accent-border: #BCE8E2;
+  --mint-text-teal: #0F766E;
+  --mint-text-heading: #134E4A;
+  --mint-card-bg: rgba(255, 255, 255, 0.85);
+  --mint-card-border: rgba(255, 255, 255, 0.8);
+  --mint-glass-shadow: 0 4px 24px -2px rgba(18, 184, 176, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+/* Base Body Styles */
 body {
-  background-color: #ffffff;
-  color: #1a202c;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  color: #1e293b;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Default / Soft Mint Theme Body Background */
+html:not(.dark):not(.theme-light) body,
+html.theme-mint body {
+  background: radial-gradient(120% 120% at 50% 0%, #F9FCFB 0%, #EAF7F5 45%, #D9F3EF 100%);
+  background-attachment: fixed;
+  color: #0f172a;
+}
+
+/* Classic Light Override */
+html.theme-light body {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+/* Dark Mode */
 html.dark {
   color-scheme: dark;
 }
 
 html.dark body {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background: radial-gradient(120% 120% at 50% 0%, #0F2327 0%, #09171C 50%, #050E12 100%);
+  background-attachment: fixed;
+  color: #f1f5f9;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Focus ring for accessibility */
+/* Glassmorphism Panel Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 24px -2px rgba(18, 184, 176, 0.08), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 30, 37, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+}
+
+.glass-pill-active {
+  background-color: #E1F6F3;
+  color: #0F766E;
+  border: 1px solid #BCE8E2;
+}
+
+.dark .glass-pill-active {
+  background-color: rgba(18, 184, 176, 0.18);
+  color: #2DD4BF;
+  border: 1px solid rgba(18, 184, 176, 0.35);
+}
+
+/* Modern Minimalist Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #C4E8E2;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #1B3F45;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #12B8B0;
+}
+
+/* Focus ring for accessibility with teal accent */
 *:focus-visible {
-  outline: 2px solid #166534;
+  outline: 2px solid #12B8B0;
   outline-offset: 2px;
 }
 
 /* Smooth transitions */
 a, button {
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s;
 }

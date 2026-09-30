@@ -66,7 +66,7 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
         path: 'volunteerId',
         populate: { path: 'userId', select: 'name phone email' }
       })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: -1 })
       .lean();
 
     // Attach distribution info for each pickup

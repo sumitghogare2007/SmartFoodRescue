@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import VolunteerSelectModal from '../../components/volunteer/VolunteerSelectModal';
 
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+import DashboardHero from '../../components/dashboard/DashboardHero';
 
 const DonorDashboard = () => {
   const [donations, setDonations] = useState<FoodDonation[]>([]);
@@ -75,123 +76,131 @@ const DonorDashboard = () => {
   const completedCount = donations.filter(d => ['DELIVERED', 'DISTRIBUTED'].includes(d.status)).length;
   const pendingRequests = requests.filter(r => r.requestStatus === 'PENDING');
 
+  const rescueRate = donations.length > 0 ? Math.round((completedCount / donations.length) * 100) : 100;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">Donor Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage your donations, view NGO requests, and track food pickups</p>
-        </div>
-        <button
-          onClick={() => navigate('/donations/new')}
-          className="flex items-center px-4 py-2 bg-[#166534] text-white rounded-md hover:bg-green-800 transition-colors shadow-sm font-medium text-sm"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Create New Donation
-        </button>
-      </div>
+      {/* Soft Mint Hero Centerpiece matching user screenshot */}
+      <DashboardHero
+        pillText="DONOR OPERATIONS DESK"
+        titlePrefix="Redistribute surplus food"
+        titleAccent="without the clutter."
+        subtitle="Review verified NGO requests, track green-corridor pickups, and monitor real-time distribution from one calm workspace."
+        statNumber={`${availableCount} Available`}
+        statLabel="Rescue Pipeline"
+        statSubtext={`${completedCount} completed of ${donations.length} total donations`}
+        progressPercent={rescueRate}
+        actions={
+          <button
+            onClick={() => navigate('/donations/new')}
+            className="flex items-center px-4 py-2.5 bg-[#12B8B0] text-white rounded-xl hover:bg-[#0EA29B] transition-all shadow-sm shadow-[#12B8B0]/25 font-semibold text-sm active:scale-[0.99] cursor-pointer"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Create New Donation
+          </button>
+        }
+      />
 
-      {/* Metrics Row */}
+      {/* Metrics Row in Translucent White Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-5 shadow-[0_4px_20px_-2px_rgba(18,184,176,0.06)] border border-white/80 dark:border-white/10 flex items-center justify-between transition-all hover:shadow-[0_8px_30px_rgba(18,184,176,0.1)] hover:-translate-y-0.5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Available Food</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{availableCount}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">Available Food</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{availableCount}</p>
           </div>
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-            <Package className="w-5 h-5 text-blue-700" />
+          <div className="p-3 rounded-xl bg-[#EAF7F5] dark:bg-teal-950/60 border border-[#BCE8E2] dark:border-teal-800/50 shadow-xs">
+            <Package className="w-5 h-5 text-[#12B8B0]" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-5 shadow-[0_4px_20px_-2px_rgba(18,184,176,0.06)] border border-white/80 dark:border-white/10 flex items-center justify-between transition-all hover:shadow-[0_8px_30px_rgba(18,184,176,0.1)] hover:-translate-y-0.5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">In Progress</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{inProgressCount}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">In Progress</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{inProgressCount}</p>
           </div>
-          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <Clock className="w-5 h-5 text-amber-700" />
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/50 shadow-xs">
+            <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200 flex items-center justify-between">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-5 shadow-[0_4px_20px_-2px_rgba(18,184,176,0.06)] border border-white/80 dark:border-white/10 flex items-center justify-between transition-all hover:shadow-[0_8px_30px_rgba(18,184,176,0.1)] hover:-translate-y-0.5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Delivered & Distributed</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{completedCount}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">Delivered & Distributed</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{completedCount}</p>
           </div>
-          <div className="p-3 rounded-lg bg-green-50 border border-green-200">
-            <CheckCircle className="w-5 h-5 text-[#166534]" />
+          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/50 shadow-xs">
+            <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
       </div>
 
       {/* Pending NGO Requests Alert */}
       {pendingRequests.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+        <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-amber-900">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                 You have {pendingRequests.length} pending food request{pendingRequests.length > 1 ? 's' : ''} from NGOs!
               </p>
-              <p className="text-xs text-amber-700">Review and accept requests below to dispatch volunteers.</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">Review and accept requests below to dispatch volunteers.</p>
             </div>
           </div>
           <button
             onClick={() => setActiveTab('requests')}
-            className="px-3 py-1.5 bg-amber-700 text-white rounded text-xs font-medium hover:bg-amber-800"
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             View Requests
           </button>
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => setActiveTab('donations')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'donations'
-                ? 'border-[#166534] text-[#166534] font-bold'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            My Donations & History ({donations.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-              activeTab === 'requests'
-                ? 'border-[#166534] text-[#166534] font-bold'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            NGO Requests ({requests.length})
-            {pendingRequests.length > 0 && (
-              <span className="px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded-full text-xs font-bold">
-                {pendingRequests.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('pickups')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'pickups'
-                ? 'border-[#166534] text-[#166534] font-bold'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Pickup Status ({pickups.length})
-          </button>
-        </nav>
+      {/* Pill-based Tab Navigation (matching minimal SaaS design) */}
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-1.5 rounded-2xl border border-[#D5EFEA] dark:border-white/10 flex flex-wrap gap-2 shadow-xs">
+        <button
+          onClick={() => setActiveTab('donations')}
+          className={`py-2 px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeTab === 'donations'
+              ? 'bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/50 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-[#EAF7F5]/80 dark:hover:bg-slate-800 hover:text-[#0F766E]'
+          }`}
+        >
+          My Donations ({donations.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`py-2 px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'requests'
+              ? 'bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/50 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-[#EAF7F5]/80 dark:hover:bg-slate-800 hover:text-[#0F766E]'
+          }`}
+        >
+          NGO Requests ({requests.length})
+          {pendingRequests.length > 0 && (
+            <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded-md text-[10px] font-bold">
+              {pendingRequests.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('pickups')}
+          className={`py-2 px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'pickups'
+              ? 'bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/50 shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-[#EAF7F5]/80 dark:hover:bg-slate-800 hover:text-[#0F766E]'
+          }`}
+        >
+          <Truck className="w-3.5 h-3.5" />
+          Active Pickups ({pickups.length})
+        </button>
       </div>
 
       {/* Tab 1: My Donations */}
       {activeTab === 'donations' && (
-        <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700">All Donations</h2>
-            <span className="text-xs text-gray-500">{donations.length} records</span>
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl border border-white/90 dark:border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(18,184,176,0.06)] overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#D2EBE6]/70 dark:border-white/10 bg-[#F8FCFB]/80 dark:bg-slate-800/60 flex justify-between items-center">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">All Donations</h2>
+            <span className="text-xs text-[#0F766E] dark:text-teal-300 font-semibold bg-[#E1F6F3] dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-[#BCE8E2] dark:border-teal-800/40">{donations.length} records</span>
           </div>
           {donations.length === 0 ? (
             <div className="p-8 text-center text-gray-500 text-sm">

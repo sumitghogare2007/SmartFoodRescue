@@ -1,33 +1,91 @@
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, UserCircle } from 'lucide-react';
-import Logo from '../ui/Logo';
+import { useTheme } from '../../context/ThemeContext';
+import { LogOut, Bell, Moon, Sun } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 const Navbar = () => {
   const { authUser, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path.includes('/dashboard')) return 'Rescue Operations';
+    if (path.includes('/donations/new')) return 'New Food Donation';
+    if (path.includes('/donations')) return 'Donations Directory';
+    if (path.includes('/pickups')) return 'Fleet & Pickups';
+    if (path.includes('/users')) return 'Platform Directory';
+    if (path.includes('/settings')) return 'Settings & Preferences';
+    return 'Rescue Desk';
+  };
+
+  const initial = (authUser?.name || 'S').trim().charAt(0).toUpperCase();
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 transition-colors">
-      <div className="flex items-center">
-        <Logo size={28} showText={true} textSize="text-base sm:text-lg font-bold" />
+    <header className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-[#D2EBE6]/80 dark:border-white/10 h-16 flex items-center justify-between px-6 transition-colors z-10 shadow-xs">
+      {/* Page Title & Breadcrumb */}
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#12B8B0] dark:text-teal-400 bg-[#E1F6F3] dark:bg-teal-950/60 px-2 py-0.5 rounded-md border border-[#BCE8E2] dark:border-teal-800/40">
+            {authUser?.userType || 'PLATFORM'}
+          </span>
+          <h1 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+            {getPageTitle()}
+          </h1>
+        </div>
       </div>
       
-      <div className="flex items-center gap-4">
-        <div className="flex flex-col items-end">
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{authUser?.name || 'User'}</span>
-          <span className="text-xs text-[#166534] dark:text-green-300 bg-green-50 dark:bg-green-950/50 border border-transparent dark:border-green-800/60 px-2 py-0.5 rounded-full font-medium tracking-wide">
-            {authUser?.userType}
-          </span>
-        </div>
-        <div className="h-8 w-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-300">
-          <UserCircle className="w-6 h-6" />
-        </div>
-        <button 
-          onClick={signOut}
-          className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors ml-2"
-          title="Sign Out"
+      {/* Right Controls (matching screenshot top-right) */}
+      <div className="flex items-center gap-2.5 sm:gap-3.5">
+        {/* Quick Dark Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="w-9 h-9 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-[#D5EFEA] dark:border-slate-700/80 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#12B8B0] hover:bg-[#EAF7F5] dark:hover:bg-slate-800 transition-all cursor-pointer shadow-xs"
+          title={`Switch to ${theme === 'dark' ? 'Soft Mint' : 'Dark'} Theme`}
+          aria-label="Toggle theme"
         >
-          <LogOut className="w-5 h-5" />
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-500" />
+          ) : (
+            <Moon className="w-4 h-4 text-[#12B8B0]" />
+          )}
         </button>
+
+        {/* Notifications Icon with Badge */}
+        <div className="relative">
+          <button 
+            className="w-9 h-9 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-[#D5EFEA] dark:border-slate-700/80 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#12B8B0] hover:bg-[#EAF7F5] dark:hover:bg-slate-800 transition-all cursor-pointer shadow-xs"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+          <span className="absolute 1.5 -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#12B8B0] ring-2 ring-white dark:ring-slate-900" />
+        </div>
+
+        {/* User Pill Button (matching screenshot pill: [S] sumit / Library admin) */}
+        <div className="flex items-center gap-2 pl-1 sm:pl-2">
+          <div className="flex items-center gap-2.5 bg-white/80 dark:bg-slate-800/80 border border-[#D5EFEA] dark:border-slate-700/80 rounded-2xl py-1.5 px-2.5 sm:px-3 shadow-xs">
+            <div className="w-7 h-7 rounded-xl bg-[#12B8B0] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              {initial}
+            </div>
+            <div className="hidden sm:flex flex-col text-left min-w-0">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate max-w-[120px]">
+                {authUser?.name || 'sumit'}
+              </span>
+              <span className="text-[10px] text-slate-400 capitalize truncate">
+                {authUser?.userType ? `${authUser.userType.toLowerCase()} workspace` : 'Active'}
+              </span>
+            </div>
+            <button 
+              onClick={signOut}
+              className="text-slate-400 hover:text-rose-500 transition-colors ml-1 p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+              title="Sign Out"
+              aria-label="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

@@ -12,7 +12,8 @@ import {
   LogOut, 
   CheckCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -102,43 +103,70 @@ const Settings: React.FC = () => {
         <p className="text-sm">Use this only while physically at your pickup facility or NGO destination. This updates the coordinates used for delivery routing.</p>
         <button onClick={saveFacilityLocation} disabled={locating} className="min-h-12 px-5 bg-emerald-700 text-white rounded-lg">{locating ? 'Locating...' : 'Save this device’s location as my facility'}</button>
       </div>}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex items-center justify-between">
+      <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_32px_rgba(18,184,176,0.06)] border border-white/90 dark:border-white/10 overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#D2EBE6]/70 dark:border-white/10 bg-[#F8FCFB]/80 dark:bg-slate-800/60 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Appearance & Theme
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Choose your interface theme. Your preference is stored locally and applied across the entire app.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Choose your interface theme. Your preference is saved locally across all devices and dashboards.
             </p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/40 text-[#166534] dark:text-green-300 border border-green-200 dark:border-green-800">
-            Active: {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/40">
+            Active: {theme === 'mint' ? 'Soft Mint Aqua' : theme === 'dark' ? 'Dark Mode' : 'Clean Light'}
           </span>
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
-            {/* Light Mode Option */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Soft Mint Aqua Glassmorphism Option (Flagship) */}
+            <button
+              type="button"
+              onClick={() => setTheme('mint')}
+              className={`p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all cursor-pointer ${
+                theme === 'mint'
+                  ? 'border-[#12B8B0] bg-[#EAF7F5]/70 dark:bg-teal-950/30 shadow-sm shadow-[#12B8B0]/20 ring-2 ring-[#12B8B0]/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-[#12B8B0]/40 bg-white/60 dark:bg-slate-800/50'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className={`p-2.5 rounded-xl ${theme === 'mint' ? 'bg-[#12B8B0] text-white shadow-xs' : 'bg-[#E1F6F3] text-[#0F766E]'}`}>
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                {theme === 'mint' && <CheckCircle className="w-5 h-5 text-[#12B8B0]" />}
+              </div>
+              <div>
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                  Soft Mint Aqua
+                  <span className="text-[10px] uppercase tracking-wide bg-[#12B8B0] text-white px-1.5 py-0.2 rounded-md font-bold">New</span>
+                </span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Subtle white-to-mint gradient, translucent white cards, and teal accents (#12B8B0)
+                </p>
+              </div>
+            </button>
+
+            {/* Clean Light Mode Option */}
             <button
               type="button"
               onClick={() => setTheme('light')}
-              className={`p-4 rounded-lg border-2 text-left flex items-start gap-4 transition-colors ${
+              className={`p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all cursor-pointer ${
                 theme === 'light'
-                  ? 'border-[#166534] bg-green-50/50 dark:bg-green-950/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                  ? 'border-[#12B8B0] bg-slate-50 dark:bg-slate-800/50 shadow-sm'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white/60 dark:bg-slate-800/50'
               }`}
             >
-              <div className={`p-2.5 rounded-md ${theme === 'light' ? 'bg-[#166534] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                <Sun className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Light Mode</span>
-                  {theme === 'light' && <CheckCircle className="w-4 h-4 text-[#166534]" />}
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className={`p-2.5 rounded-xl ${theme === 'light' ? 'bg-slate-800 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  <Sun className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Clean, crisp interface optimized for well-lit environments
+                {theme === 'light' && <CheckCircle className="w-5 h-5 text-[#12B8B0]" />}
+              </div>
+              <div>
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-100">Clean Light</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Classic crisp minimalist white interface
                 </p>
               </div>
             </button>
@@ -147,22 +175,22 @@ const Settings: React.FC = () => {
             <button
               type="button"
               onClick={() => setTheme('dark')}
-              className={`p-4 rounded-lg border-2 text-left flex items-start gap-4 transition-colors ${
+              className={`p-4 rounded-2xl border-2 text-left flex flex-col justify-between transition-all cursor-pointer ${
                 theme === 'dark'
-                  ? 'border-[#166534] bg-green-50/50 dark:bg-green-950/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                  ? 'border-[#12B8B0] bg-slate-900/60 shadow-sm shadow-[#12B8B0]/20 ring-2 ring-[#12B8B0]/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white/60 dark:bg-slate-800/50'
               }`}
             >
-              <div className={`p-2.5 rounded-md ${theme === 'dark' ? 'bg-[#166534] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                <Moon className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Dark Mode</span>
-                  {theme === 'dark' && <CheckCircle className="w-4 h-4 text-[#166534]" />}
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-[#12B8B0] text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  <Moon className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Soft contrast theme for night shifts and low light
+                {theme === 'dark' && <CheckCircle className="w-5 h-5 text-[#12B8B0]" />}
+              </div>
+              <div>
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-100">Dark Glassmorphism</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Deep ocean slate theme with mint ambient accents for night shifts
                 </p>
               </div>
             </button>

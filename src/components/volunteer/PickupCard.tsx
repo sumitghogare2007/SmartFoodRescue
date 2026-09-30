@@ -83,7 +83,7 @@ export function PickupCard({ pickup, onUpdateStatus, isVolunteerView = true }: P
 
       {renderActionButton()}
 
-      {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(status) && (
+      {!['DELIVERED', 'DISTRIBUTED'].includes(status) && (
         <div className="mt-3 pt-3 border-t border-gray-100">
           <Link
             to={`/tracking/${id}`}

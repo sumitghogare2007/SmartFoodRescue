@@ -45,7 +45,13 @@ const PickupsPage = () => {
       if (authUser?.userType === 'VOLUNTEER') url = '/api/pickups?volunteerId=me';
       
       const response = await apiClient.get(url);
-      setPickups(response.data);
+      const data: Pickup[] = Array.isArray(response.data) ? response.data : [];
+      data.sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt || a.pickupDate || 0).getTime();
+        const timeB = new Date(b.createdAt || b.pickupDate || 0).getTime();
+        return timeB - timeA;
+      });
+      setPickups(data);
     } catch (err) {
       toast.error('Failed to load pickups');
     } finally {
@@ -58,52 +64,57 @@ const PickupsPage = () => {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'DISTRIBUTED':
-        return 'bg-teal-50 text-teal-800 border-teal-300';
+        return 'bg-teal-50 text-teal-800 border-teal-200 ring-1 ring-teal-500/20';
       case 'DELIVERED':
-        return 'bg-green-50 text-green-800 border-green-300';
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200 ring-1 ring-emerald-500/20';
       case 'ARRIVED':
-        return 'bg-purple-50 text-purple-800 border-purple-300';
+        return 'bg-purple-50 text-purple-800 border-purple-200 ring-1 ring-purple-500/20';
       case 'EN_ROUTE':
-        return 'bg-emerald-50 text-emerald-800 border-emerald-300 animate-pulse';
+        return 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-2 ring-emerald-500/30 animate-pulse';
       case 'DISPATCHED':
-        return 'bg-amber-50 text-amber-800 border-amber-300';
+        return 'bg-amber-50 text-amber-800 border-amber-200 ring-1 ring-amber-500/20';
       case 'RECEIVED':
-        return 'bg-blue-50 text-blue-800 border-blue-300';
+        return 'bg-blue-50 text-blue-800 border-blue-200 ring-1 ring-blue-500/20';
       case 'ASSIGNED':
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return 'bg-slate-100 text-slate-700 border-slate-200 ring-1 ring-slate-400/20';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">Pickups & Food Tracking</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pickups & Food Tracking</h1>
+          </div>
+          <p className="text-sm text-slate-500 mt-1">
             Complete audit trail of food donations from donor handover to NGO distribution
           </p>
         </div>
-        <div className="text-xs font-semibold px-3 py-1.5 bg-green-50 text-[#166534] border border-green-200 rounded-md">
-          {filteredPickups.length} Total Records
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-full text-xs font-semibold shadow-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>{filteredPickups.length} Total Records</span>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 flex gap-2 overflow-x-auto">
+      <div className="bg-white/80 backdrop-blur-sm p-1.5 rounded-xl shadow-xs border border-slate-200/80 flex gap-1.5 overflow-x-auto">
         {['ALL', 'ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'].map(status => (
           <button 
             key={status}
             onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 flex items-center gap-2
               ${filter === status 
-                ? 'bg-[#166534] text-white shadow-sm' 
-                : 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+                ? 'bg-[#166534] text-white shadow-xs' 
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'}`}
           >
-            {status}
+            <span>{status}</span>
             {status !== 'ALL' && (
-              <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${
-                filter === status ? 'bg-green-800 text-white' : 'bg-gray-200 text-gray-700'
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                filter === status ? 'bg-emerald-950/40 text-white' : 'bg-slate-200 text-slate-700'
               }`}>
                 {pickups.filter(p => p.pickupStatus === status).length}
               </span>
@@ -144,32 +155,32 @@ const PickupsPage = () => {
               const history = pickup.statusHistory || [];
 
               return (
-                <div key={pickup._id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div key={pickup._id} className="bg-white rounded-2xl shadow-xs hover:shadow-md border border-slate-200/90 transition-all duration-200 overflow-hidden">
                   
                   {/* Card Header */}
-                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex flex-wrap justify-between items-center gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-green-100 border border-green-300 flex items-center justify-center text-[#166534]">
+                  <div className="bg-slate-50/70 border-b border-slate-200/80 px-6 py-4 flex flex-wrap justify-between items-center gap-3.5">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-[#166534] shadow-xs shrink-0">
                         <Utensils className="w-5 h-5" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-gray-900 text-base">
+                          <h3 className="font-bold text-slate-900 text-base">
                             {donation?.foodType || `Pickup #${pickup._id.slice(-6)}`}
                           </h3>
                           {donation?.isVegetarian !== undefined && (
-                            <span className={`px-2 py-0.5 text-xs font-bold rounded ${
-                              donation.isVegetarian ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full ${
+                              donation.isVegetarian ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
                             }`}>
                               {donation.isVegetarian ? 'Veg' : 'Non-Veg'}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 flex items-center gap-2 mt-0.5 font-mono">
+                        <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 font-mono">
                           <span>Pickup ID: #{pickup._id.slice(-6)}</span>
                           <span>•</span>
                           <span className="flex items-center">
-                            <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                            <Calendar className="w-3 h-3 mr-1 text-slate-400" />
                             {new Date(pickup.pickupDate || pickup.createdAt).toLocaleDateString()}
                           </span>
                         </p>
@@ -177,14 +188,14 @@ const PickupsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(pickup.pickupStatus) && (
+                      {!['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
                         <Link
                           to={`/tracking/${pickup._id}`}
-                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#166534] hover:bg-green-800 text-white shadow-xs transition-colors flex items-center gap-1.5"
+                          className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#166534] hover:bg-green-800 text-white shadow-xs transition-colors flex items-center gap-1.5"
                         >
                           <Truck className="w-3.5 h-3.5" />
                           <span>Track Volunteer</span>
-                          {pickup.pickupStatus === 'EN_ROUTE' && (
+                          {['EN_ROUTE', 'DISPATCHED'].includes(pickup.pickupStatus) && (
                             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
                           )}
                         </Link>
@@ -193,9 +204,9 @@ const PickupsPage = () => {
                        !['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
                         <button
                           onClick={() => setAssigningPickupId(pickup._id)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-green-50 dark:bg-green-950/40 text-[#166534] dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors flex items-center gap-1 shadow-xs"
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center gap-1.5 shadow-xs"
                         >
-                          <Truck className="w-3.5 h-3.5" />
+                          <Truck className="w-3.5 h-3.5 text-slate-500" />
                           {pickup.volunteerId ? 'Change Volunteer' : 'Assign Volunteer'}
                         </button>
                       )}
@@ -205,23 +216,32 @@ const PickupsPage = () => {
                     </div>
                   </div>
 
-                  {/* Active Live Tracking Banner for DISPATCHED, EN_ROUTE, ARRIVED */}
-                  {['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(pickup.pickupStatus) && (
-                    <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+                  {/* Active Live Tracking Banner for active pickup stages */}
+                  {!['DELIVERED', 'DISTRIBUTED'].includes(pickup.pickupStatus) && (
+                    <div className="bg-gradient-to-r from-emerald-50/90 via-teal-50/80 to-emerald-50/90 border-b border-emerald-200/70 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping"></span>
-                        <span className="font-bold text-emerald-950">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                        </span>
+                        <span className="font-semibold text-emerald-950">
                           {pickup.pickupStatus === 'EN_ROUTE'
                             ? '🚚 Volunteer is En Route with Rescue Food'
                             : pickup.pickupStatus === 'ARRIVED'
                             ? '📍 Volunteer Has Arrived at Destination (NGO)'
-                            : '📦 Delivery Dispatched & Ready for Navigation'}
+                            : pickup.pickupStatus === 'DISPATCHED'
+                            ? '📦 Delivery Dispatched & Ready for Navigation'
+                            : pickup.pickupStatus === 'RECEIVED'
+                            ? '🍽️ Food Handover Completed • Rescue in Transit'
+                            : pickup.volunteerId
+                            ? '🤝 Volunteer Assigned • Live Tracking Ready'
+                            : '🗺️ Rescue Order Created • Tracking Ready'}
                         </span>
-                        <span className="text-emerald-700 hidden sm:inline">• Live GPS tracking available</span>
+                        <span className="text-emerald-700/80 hidden sm:inline">• Live GPS tracking available</span>
                       </div>
                       <Link
                         to={`/tracking/${pickup._id}`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#166534] hover:bg-green-800 text-white rounded-md text-xs font-bold transition shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#166534] hover:bg-green-800 text-white rounded-lg text-xs font-semibold transition-all shadow-xs"
                       >
                         <Navigation className="w-3.5 h-3.5" />
                         <span>Track Volunteer Live Map</span>
@@ -257,38 +277,38 @@ const PickupsPage = () => {
                   <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     {/* Column 1: Food & Donation Details ("What was donated") */}
-                    <div className="space-y-3 bg-gray-50/70 p-4 rounded-lg border border-gray-200">
+                    <div className="space-y-3 bg-slate-50/70 p-4.5 rounded-xl border border-slate-200/80">
                       <div className="flex items-center text-[#166534] font-bold text-xs uppercase tracking-wider">
                         <Package className="w-4 h-4 mr-1.5" />
                         What Was Donated
                       </div>
-                      <div className="space-y-1.5 text-sm">
-                        <p className="font-semibold text-gray-900">{donation?.foodType || 'Food Items'}</p>
-                        <p className="text-gray-600 flex justify-between">
-                          <span className="text-gray-500">Category:</span>
-                          <span className="font-medium">{donation?.foodCategory || 'Prepared Meal'}</span>
+                      <div className="space-y-2 text-sm">
+                        <p className="font-bold text-slate-900 text-base">{donation?.foodType || 'Food Items'}</p>
+                        <p className="text-slate-600 flex justify-between items-center text-xs">
+                          <span className="text-slate-500">Category:</span>
+                          <span className="font-semibold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">{donation?.foodCategory || 'Prepared Meal'}</span>
                         </p>
-                        <p className="text-gray-600 flex justify-between">
-                          <span className="text-gray-500">Quantity:</span>
-                          <span className="font-bold text-[#166534]">
+                        <p className="text-slate-600 flex justify-between items-center text-xs">
+                          <span className="text-slate-500">Quantity:</span>
+                          <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shadow-2xs">
                             {donation?.quantity || req?.requestedQuantity || 'N/A'} {donation?.unit || 'servings'}
                           </span>
                         </p>
                         {donation?.expiryTime && (
-                          <p className="text-gray-600 flex justify-between">
-                            <span className="text-gray-500">Expiry Time:</span>
-                            <span className="font-medium text-amber-700">
+                          <p className="text-slate-600 flex justify-between items-center text-xs">
+                            <span className="text-slate-500">Expiry Time:</span>
+                            <span className="font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
                               {new Date(donation.expiryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
                             </span>
                           </p>
                         )}
                         {donation?.aadhaarId && (
-                          <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-xs">
-                            <span className="text-gray-500 flex items-center">
-                              <ShieldCheck className="w-3.5 h-3.5 text-green-600 mr-1" />
+                          <div className="pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs">
+                            <span className="text-slate-500 flex items-center font-medium">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 mr-1" />
                               Donor Aadhaar:
                             </span>
-                            <span className="font-mono font-bold bg-green-50 text-green-800 px-2 py-0.5 rounded border border-green-200">
+                            <span className="font-mono font-bold bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
                               {donation.aadhaarId}
                             </span>
                           </div>
@@ -301,27 +321,27 @@ const PickupsPage = () => {
                       
                       {/* Donor Information */}
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200/70 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
                           <Building2 className="w-4 h-4" />
                         </div>
                         <div className="text-sm">
-                          <p className="text-xs font-bold uppercase tracking-wider text-indigo-900">From (Donor)</p>
-                          <p className="font-bold text-gray-900">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-900">From (Donor)</p>
+                          <p className="font-bold text-slate-900">
                             {donor?.organizationName || donorUser?.name || 'Registered Food Donor'}
                           </p>
-                          <p className="text-xs text-gray-600 mt-0.5 flex items-center">
-                            <MapPin className="w-3 h-3 text-gray-400 mr-1 shrink-0" />
+                          <p className="text-xs text-slate-600 mt-0.5 flex items-center">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 mr-1 shrink-0" />
                             {donorLoc 
                               ? `${donorLoc.address}, ${donorLoc.area}, ${donorLoc.city} ${donorLoc.pincode || ''}`
                               : 'Pickup Address available on file'}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-3">
+                          <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
                             <span className="flex items-center">
-                              <Phone className="w-3 h-3 mr-1 text-gray-400" />
+                              <Phone className="w-3 h-3 mr-1 text-slate-400" />
                               {donorUser?.phone || donor?.contactPhone || 'N/A'}
                             </span>
                             <span className="flex items-center">
-                              <Mail className="w-3 h-3 mr-1 text-gray-400" />
+                              <Mail className="w-3 h-3 mr-1 text-slate-400" />
                               {donorUser?.email || donor?.contactEmail || 'N/A'}
                             </span>
                           </p>
@@ -329,45 +349,45 @@ const PickupsPage = () => {
                       </div>
 
                       {/* NGO Destination Information */}
-                      <div className="flex items-start gap-3 pt-3 border-t border-gray-100">
-                        <div className="w-8 h-8 rounded-md bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="flex items-start gap-3 pt-3.5 border-t border-slate-100">
+                        <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200/70 text-purple-700 flex items-center justify-center shrink-0 shadow-2xs">
                           <Heart className="w-4 h-4" />
                         </div>
                         <div className="text-sm">
-                          <p className="text-xs font-bold uppercase tracking-wider text-purple-900">To (NGO)</p>
-                          <p className="font-bold text-gray-900">{ngo?.ngoName || 'Verified Partner NGO'}</p>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-purple-900">To (NGO)</p>
+                          <p className="font-bold text-slate-900">{ngo?.ngoName || 'Verified Partner NGO'}</p>
                           {ngo?.registrationNo && (
-                            <p className="text-xs text-gray-500 font-mono">Reg: {ngo.registrationNo}</p>
+                            <p className="text-xs text-slate-500 font-mono">Reg: {ngo.registrationNo}</p>
                           )}
-                          <p className="text-xs text-gray-600 mt-0.5 flex items-center">
-                            <MapPin className="w-3 h-3 text-gray-400 mr-1 shrink-0" />
+                          <p className="text-xs text-slate-600 mt-0.5 flex items-center">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 mr-1 shrink-0" />
                             {ngoLoc 
                               ? `${ngoLoc.address}, ${ngoLoc.area}, ${ngoLoc.city} ${ngoLoc.pincode || ''}`
                               : 'NGO Facility Address on file'}
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center">
-                            <Phone className="w-3 h-3 mr-1 text-gray-400" />
+                          <p className="text-xs text-slate-500 mt-1 flex items-center">
+                            <Phone className="w-3 h-3 mr-1 text-slate-400" />
                             {ngo?.contactNo || '9833098765'}
                           </p>
                         </div>
                       </div>
 
                       {/* Volunteer Courier Information */}
-                      <div className="flex items-start gap-3 pt-3 border-t border-gray-100">
-                        <div className="w-8 h-8 rounded-md bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="flex items-start gap-3 pt-3.5 border-t border-slate-100">
+                        <div className="w-9 h-9 rounded-xl bg-sky-50 border border-sky-200/70 text-sky-700 flex items-center justify-center shrink-0 shadow-2xs">
                           <Truck className="w-4 h-4" />
                         </div>
                         <div className="text-sm">
-                          <p className="text-xs font-bold uppercase tracking-wider text-blue-900">Transported By (Volunteer)</p>
-                          <p className="font-bold text-gray-900">
-                            {volunteerUser?.name || 'Vikram Joshi (Assigned Volunteer)'}
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-sky-900">Transported By (Volunteer)</p>
+                          <p className="font-bold text-slate-900">
+                            {volunteerUser?.name || 'Assigned Volunteer'}
                           </p>
-                          <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-3">
-                            <span>Vehicle: {volunteer?.vehicleType || 'Van / Bike'}</span>
+                          <p className="text-xs text-slate-600 mt-1 flex items-center gap-3">
+                            <span className="font-medium text-slate-700">Vehicle: {volunteer?.vehicleType || 'Van / Bike'}</span>
                             <span>•</span>
                             <span className="flex items-center">
-                              <Phone className="w-3 h-3 mr-1 text-gray-400" />
-                              {volunteerUser?.phone || '9844055443'}
+                              <Phone className="w-3 h-3 mr-1 text-slate-400" />
+                              {volunteerUser?.phone || 'N/A'}
                             </span>
                           </p>
                         </div>
@@ -376,13 +396,13 @@ const PickupsPage = () => {
                     </div>
 
                     {/* Column 3: 7-Stage Audit Timeline */}
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col">
-                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 text-center">
+                    <div className="bg-slate-50/70 rounded-xl p-4.5 border border-slate-200/80 flex flex-col">
+                      <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 text-center">
                         7-Stage Rescue Timeline
                       </p>
 
                       <div className="space-y-4 relative flex-1">
-                        <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-gray-200"></div>
+                        <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-slate-200"></div>
 
                         {['ASSIGNED', 'RECEIVED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'DISTRIBUTED'].map((step, idx, arr) => {
                           const statusIndex = arr.indexOf(pickup.pickupStatus);
@@ -392,23 +412,25 @@ const PickupsPage = () => {
 
                           return (
                             <div key={step} className="flex items-start relative z-10">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 border-2 shrink-0
-                                ${isCompleted 
-                                  ? 'bg-green-100 border-[#166534] text-[#166534]' 
-                                  : 'bg-white border-gray-300 text-transparent'}
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 border-2 shrink-0 transition-all
+                                ${isCurrent 
+                                  ? 'bg-[#166534] border-[#166534] text-white ring-4 ring-emerald-100 shadow-xs' 
+                                  : isCompleted 
+                                  ? 'bg-emerald-100 border-[#166534] text-[#166534]' 
+                                  : 'bg-white border-slate-300 text-transparent'}
                               `}>
-                                {isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                {(isCompleted || isCurrent) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className={`text-xs ${
                                   isCurrent 
-                                    ? 'font-bold text-[#1e3a5f]' 
-                                    : isCompleted ? 'font-semibold text-gray-800' : 'text-gray-400'
+                                    ? 'font-bold text-[#166534]' 
+                                    : isCompleted ? 'font-semibold text-slate-800' : 'text-slate-400'
                                 }`}>
                                   {step}
                                 </p>
                                 {historyEntry?.changedAt && (
-                                  <p className="text-[11px] text-gray-500 font-mono">
+                                  <p className="text-[11px] text-slate-500 font-mono">
                                     {new Date(historyEntry.changedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                 )}
@@ -419,8 +441,8 @@ const PickupsPage = () => {
                       </div>
 
                       {pickup.pickupStatus === 'DISTRIBUTED' && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-                          <span className="inline-flex items-center text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded border border-teal-200">
+                        <div className="mt-3 pt-3 border-t border-slate-200 text-center">
+                          <span className="inline-flex items-center text-xs font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 shadow-2xs">
                             <Heart className="w-3 h-3 mr-1 text-teal-600 fill-current" />
                             Completed & Verified
                           </span>

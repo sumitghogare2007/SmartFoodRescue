@@ -32,3 +32,9 @@ server/node_modules
 server/dist
 atlas-credentials.env
 *.credentials.env
+
+# Scratch and temporary folders
+.codex-finalizer/
+.pptx-work/
+output/
+tmp/
