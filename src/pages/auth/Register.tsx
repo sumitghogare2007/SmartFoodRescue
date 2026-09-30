@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/ui/Logo';
-import { Building2, MapPin, Truck } from 'lucide-react';
+import { Building2, MapPin, Truck, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Register = () => {
@@ -32,6 +32,7 @@ const Register = () => {
     navigator.geolocation.getCurrentPosition(position => {
       setCoordinates({ latitude: position.coords.latitude, longitude: position.coords.longitude });
       setLocating(false);
+      toast.success('Facility GPS coordinates captured!');
     }, error => {
       toast.error(error.code === 1 ? 'Location permission denied. Please enable it in browser settings.' : 'Location unavailable. Please try again at your facility.');
       setLocating(false);
@@ -71,88 +72,107 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div className="min-h-screen bg-[#EAF7F5] dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Soft Mint Ambient Glow Orbs */}
+      <div className="fixed -top-40 -left-40 w-96 h-96 bg-[#12B8B0]/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed top-1/3 -right-40 w-96 h-96 bg-[#D9F3EF]/60 dark:bg-teal-700/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed -bottom-40 left-1/4 w-96 h-96 bg-[#12B8B0]/10 dark:bg-teal-400/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
         <div className="flex justify-center mb-3">
-          <Logo size={44} showText={true} textSize="text-2xl font-bold" />
+          <Logo size={46} showText={true} textSize="text-2xl font-bold" />
         </div>
-        <h2 className="mt-4 text-2xl font-extrabold text-[#1e3a5f]">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/40 text-xs font-semibold mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#12B8B0]" />
+          Join the Ecosystem
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
           Create a new account
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Join the SmartFoodRescue network and make an impact
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Join the verified community rescuing surplus meals across your city
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4 sm:px-0">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-[0_8px_32px_rgba(18,184,176,0.08)] rounded-3xl border border-white/90 dark:border-white/10">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Full Name *
+              </label>
               <input
                 type="text"
                 name="name"
                 required
-                placeholder="e.g. Rahul Sharma"
+                placeholder="e.g., Rahul Sharma"
                 value={formData.name}
                 onChange={handleChange}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                required
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="you@domain.org"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  placeholder="9876543210"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
-              <input
-                type="tel"
-                name="phone"
-                required
-                placeholder="e.g. 9876543210"
-                value={formData.phone}
-                onChange={handleChange}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">I want to join as *</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                I want to join as *
+              </label>
               <select
                 name="userType"
                 value={formData.userType}
                 onChange={handleChange}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm rounded-md bg-white"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
               >
-                <option value="NGO">NGO / Charity Organization</option>
-                <option value="DONOR">Food Donor (Restaurant, Hotel, Event)</option>
-                <option value="VOLUNTEER">Volunteer Driver / Delivery</option>
+                <option value="NGO">NGO / Shelter / Soup Kitchen</option>
+                <option value="DONOR">Food Donor (Restaurant, Hotel, Caterer)</option>
+                <option value="VOLUNTEER">Volunteer Courier / Driver</option>
               </select>
             </div>
 
             {/* Role-specific details */}
             {formData.userType === 'DONOR' && (
-              <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-md space-y-3">
-                <div className="flex items-center text-xs font-semibold text-emerald-800">
-                  <Building2 className="w-4 h-4 mr-1" /> Donor Details
+              <div className="p-4 bg-[#EAF7F5]/80 dark:bg-teal-950/40 border border-[#BCE8E2] dark:border-teal-800/40 rounded-2xl space-y-3">
+                <div className="flex items-center text-xs font-bold text-[#0F766E] dark:text-teal-300">
+                  <Building2 className="w-4 h-4 mr-1.5 text-[#12B8B0]" /> Donor Facility Details
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Donor Type</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Donor Type</label>
                   <select
                     name="donorType"
                     value={formData.donorType}
                     onChange={handleChange}
-                    className="mt-1 block w-full text-sm border-gray-300 rounded-md bg-white p-1.5 border"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-[#12B8B0]/25"
                   >
                     <option value="Restaurant">Restaurant</option>
                     <option value="Hotel">Hotel</option>
@@ -164,61 +184,61 @@ const Register = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Organization Name (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Organization Name (Optional)</label>
                   <input
                     type="text"
                     name="organizationName"
-                    placeholder="e.g. Green Leaf Cafe"
+                    placeholder="e.g., Grand Hyatt Banquet"
                     value={formData.organizationName}
                     onChange={handleChange}
-                    className="mt-1 block w-full text-sm border-gray-300 rounded-md p-1.5 border"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                   />
                 </div>
               </div>
             )}
 
             {formData.userType === 'NGO' && (
-              <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-md space-y-3">
-                <div className="flex items-center text-xs font-semibold text-blue-800">
-                  <Building2 className="w-4 h-4 mr-1" /> NGO Details
+              <div className="p-4 bg-[#EAF7F5]/80 dark:bg-teal-950/40 border border-[#BCE8E2] dark:border-teal-800/40 rounded-2xl space-y-3">
+                <div className="flex items-center text-xs font-bold text-[#0F766E] dark:text-teal-300">
+                  <Building2 className="w-4 h-4 mr-1.5 text-[#12B8B0]" /> NGO / Charity Details
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">NGO / Trust Name (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">NGO / Trust Name (Optional)</label>
                   <input
                     type="text"
                     name="organizationName"
                     placeholder="Defaults to your name if left empty"
                     value={formData.organizationName}
                     onChange={handleChange}
-                    className="mt-1 block w-full text-sm border-gray-300 rounded-md p-1.5 border"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Registration Number (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Registration Number (Optional)</label>
                   <input
                     type="text"
                     name="registrationNo"
-                    placeholder="e.g. NGO-MH-2024-001"
+                    placeholder="e.g., NGO-MH-2024-001"
                     value={formData.registrationNo}
                     onChange={handleChange}
-                    className="mt-1 block w-full text-sm border-gray-300 rounded-md p-1.5 border"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                   />
                 </div>
               </div>
             )}
 
             {formData.userType === 'VOLUNTEER' && (
-              <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-md space-y-3">
-                <div className="flex items-center text-xs font-semibold text-amber-800">
-                  <Truck className="w-4 h-4 mr-1" /> Volunteer Vehicle
+              <div className="p-4 bg-[#EAF7F5]/80 dark:bg-teal-950/40 border border-[#BCE8E2] dark:border-teal-800/40 rounded-2xl space-y-3">
+                <div className="flex items-center text-xs font-bold text-[#0F766E] dark:text-teal-300">
+                  <Truck className="w-4 h-4 mr-1.5 text-[#12B8B0]" /> Volunteer Vehicle
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Vehicle Type</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vehicle Type</label>
                   <select
                     name="vehicleType"
                     value={formData.vehicleType}
                     onChange={handleChange}
-                    className="mt-1 block w-full text-sm border-gray-300 rounded-md bg-white p-1.5 border"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                   >
                     <option value="Bike">Motorcycle / Scooter</option>
                     <option value="Car">Car</option>
@@ -230,115 +250,134 @@ const Register = () => {
               </div>
             )}
 
-            {formData.userType !== 'VOLUNTEER' && <div className="p-3 bg-gray-50 border rounded-md text-sm">
-              <p>Capture location only while at your pickup facility or NGO destination. The address alone does not provide map coordinates.</p>
-              <button type="button" disabled={locating} onClick={captureLocation} className="mt-2 min-h-11 px-4 bg-emerald-700 text-white rounded">{locating ? 'Locating...' : 'Use this device’s location'}</button>
-              {coordinates && <p role="status">Facility coordinates captured.</p>}
-            </div>}
+            {formData.userType !== 'VOLUNTEER' && (
+              <div className="p-4 bg-[#F8FCFB]/90 dark:bg-slate-800/70 border border-[#D2EBE6] dark:border-slate-700 rounded-2xl text-xs space-y-2">
+                <p className="text-slate-600 dark:text-slate-300">
+                  Capture your facility location while physically at your pickup or drop location for accurate GPS routing.
+                </p>
+                <button
+                  type="button"
+                  disabled={locating}
+                  onClick={captureLocation}
+                  className="px-4 py-2 bg-[#12B8B0] hover:bg-[#0EA29B] text-white rounded-xl font-bold transition-all shadow-xs shadow-[#12B8B0]/25 cursor-pointer disabled:opacity-50"
+                >
+                  {locating ? 'Calibrating GPS...' : 'Capture Device Location as Facility'}
+                </button>
+                {coordinates && (
+                  <p role="status" className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <ShieldCheck className="w-4 h-4" /> Facility GPS coordinates captured.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Optional Location Toggle */}
             <div className="pt-1">
               <button
                 type="button"
                 onClick={() => setShowLocation(!showLocation)}
-                className="text-xs text-[#1e3a5f] hover:underline flex items-center font-medium"
+                className="text-xs text-[#12B8B0] hover:text-[#0EA29B] flex items-center font-bold transition-colors cursor-pointer"
               >
-                <MapPin className="w-3.5 h-3.5 mr-1 text-[#166534]" />
-                {showLocation ? 'Hide Location Details' : '+ Add Address / Location Details'}
+                <MapPin className="w-3.5 h-3.5 mr-1" />
+                {showLocation ? 'Hide Location Details' : '+ Add Address Details'}
               </button>
 
               {showLocation && (
-                <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md space-y-2">
+                <div className="mt-3 p-4 bg-[#F8FCFB]/90 dark:bg-slate-800/70 border border-[#D2EBE6] dark:border-slate-700 rounded-2xl space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700">Street Address</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Street Address</label>
                     <input
                       type="text"
                       name="address"
                       placeholder="e.g. 45 Green Avenue"
                       value={formData.address}
                       onChange={handleChange}
-                      className="mt-1 block w-full text-xs border-gray-300 rounded-md p-1.5 border"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700">Area</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Area</label>
                       <input
                         type="text"
                         name="area"
-                        placeholder="e.g. Andheri West"
+                        placeholder="e.g. Bandra West"
                         value={formData.area}
                         onChange={handleChange}
-                        className="mt-1 block w-full text-xs border-gray-300 rounded-md p-1.5 border"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700">City</label>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">City</label>
                       <input
                         type="text"
                         name="city"
                         value={formData.city}
                         onChange={handleChange}
-                        className="mt-1 block w-full text-xs border-gray-300 rounded-md p-1.5 border"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700">Pincode</label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Pincode</label>
                     <input
                       type="text"
                       name="pincode"
                       value={formData.pincode}
                       onChange={handleChange}
-                      className="mt-1 block w-full text-xs border-gray-300 rounded-md p-1.5 border"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white dark:bg-slate-800"
                     />
                   </div>
                 </div>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password *</label>
-              <input
-                type="password"
-                name="password"
-                required
-                placeholder="At least 6 characters"
-                value={formData.password}
-                onChange={handleChange}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  placeholder="Min. 6 characters"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0]"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Confirm Password *</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                required
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Confirm Password *</label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0]"
+                />
+              </div>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#166534] hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#166534] disabled:opacity-50 transition-colors"
+                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#12B8B0] hover:bg-[#0EA29B] shadow-xs shadow-[#12B8B0]/25 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {loading ? 'Creating account...' : 'Register'}
+                <span>{loading ? 'Creating account...' : 'Create Account'}</span>
+                {!loading && <ArrowRight className="w-3.5 h-3.5" />}
               </button>
             </div>
           </form>
 
           <div className="mt-6 text-center">
-            <span className="text-sm text-gray-600">Already have an account? </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Already registered? </span>
             <Link
               to="/auth/login"
-              className="font-medium text-[#1e3a5f] hover:text-blue-900"
+              className="text-xs font-bold text-[#12B8B0] hover:text-[#0EA29B] transition-colors"
             >
-              Log in
+              Sign in to workspace
             </Link>
           </div>
         </div>

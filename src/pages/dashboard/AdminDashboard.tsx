@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import { useRealtimeSync } from '../../hooks/useRealtimeSync';
+import DashboardHero from '../../components/dashboard/DashboardHero';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<PlatformStats | null>(null);
@@ -66,21 +67,21 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-[#166534] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#12B8B0] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   const statCards = [
-    { title: 'Total Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-blue-700', bg: 'bg-blue-50 border border-blue-200' },
-    { title: 'Total Donors', value: stats?.totalDonors || 0, icon: UserCircle2, color: 'text-indigo-700', bg: 'bg-indigo-50 border border-indigo-200' },
-    { title: 'Total NGOs', value: stats?.totalNgos || 0, icon: Building2, color: 'text-purple-700', bg: 'bg-purple-50 border border-purple-200' },
-    { title: 'Total Volunteers', value: stats?.totalVolunteers || 0, icon: Truck, color: 'text-orange-700', bg: 'bg-orange-50 border border-orange-200' },
-    { title: 'Total Donations', value: stats?.totalDonations || 0, icon: Package, color: 'text-emerald-700', bg: 'bg-emerald-50 border border-emerald-200' },
-    { title: 'Available Food', value: stats?.availableDonations || 0, icon: MapPin, color: 'text-amber-700', bg: 'bg-amber-50 border border-amber-200' },
-    { title: 'Active Pickups', value: stats?.activePicups || 0, icon: Truck, color: 'text-teal-700', bg: 'bg-teal-50 border border-teal-200' },
-    { title: 'Completed Distributions', value: stats?.completedDistributions || 0, icon: Heart, color: 'text-red-700', bg: 'bg-red-50 border border-red-200' },
-    { title: 'People Served', value: stats?.peopleServed || 0, icon: Users, color: 'text-green-700', bg: 'bg-green-50 border border-green-200' },
+    { title: 'Total Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-[#12B8B0]', bg: 'bg-[#EAF7F5] dark:bg-teal-950/60 border border-[#BCE8E2] dark:border-teal-800/50' },
+    { title: 'Total Donors', value: stats?.totalDonors || 0, icon: UserCircle2, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50' },
+    { title: 'Total NGOs', value: stats?.totalNgos || 0, icon: Building2, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/50' },
+    { title: 'Total Volunteers', value: stats?.totalVolunteers || 0, icon: Truck, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/50' },
+    { title: 'Total Donations', value: stats?.totalDonations || 0, icon: Package, color: 'text-[#12B8B0]', bg: 'bg-[#EAF7F5] dark:bg-teal-950/60 border border-[#BCE8E2] dark:border-teal-800/50' },
+    { title: 'Available Food', value: stats?.availableDonations || 0, icon: MapPin, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50' },
+    { title: 'Active Pickups', value: stats?.activePicups || 0, icon: Truck, color: 'text-[#0F766E] dark:text-teal-300', bg: 'bg-[#E1F6F3] dark:bg-teal-950/60 border border-[#BCE8E2] dark:border-teal-800/50' },
+    { title: 'Completed Distributions', value: stats?.completedDistributions || 0, icon: Heart, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/50' },
+    { title: 'People Served', value: stats?.peopleServed || 0, icon: Users, color: 'text-[#12B8B0]', bg: 'bg-[#EAF7F5] dark:bg-teal-950/60 border border-[#BCE8E2] dark:border-teal-800/50' },
   ];
 
   const displayedPickups = viewFilter === 'DISTRIBUTED' 
@@ -89,29 +90,36 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Platform-wide food rescue audit ledger & distribution monitoring</p>
-        </div>
-        <Link 
-          to="/pickups" 
-          className="inline-flex items-center px-4 py-2 bg-[#166534] text-white rounded-md hover:bg-green-800 transition-colors shadow-sm font-semibold text-sm"
-        >
-          <Truck className="w-4 h-4 mr-2" />
-          View Full Tracking View
-        </Link>
-      </div>
+      {/* Soft Mint Hero Centerpiece */}
+      <DashboardHero
+        pillText="PLATFORM CONTROL CENTER"
+        titlePrefix="Oversee food rescue operations"
+        titleAccent="without the clutter."
+        subtitle="Real-time multi-tenant governance, green-corridor fleet verification, and verified meal delivery audits across all metropolitan areas."
+        statNumber={stats?.peopleServed || 0}
+        statLabel="Beneficiaries Served"
+        statSubtext={`${stats?.foodRescued || 0} kg surplus food distributed`}
+        progressPercent={stats?.totalDonations ? Math.round(((stats.completedDistributions || 0) / stats.totalDonations) * 100) : 100}
+        actions={
+          <Link 
+            to="/pickups" 
+            className="inline-flex items-center px-4 py-2.5 bg-[#12B8B0] text-white rounded-xl hover:bg-[#0EA29B] transition-all shadow-sm shadow-[#12B8B0]/25 font-semibold text-sm active:scale-[0.99]"
+          >
+            <Truck className="w-4 h-4 mr-2" />
+            Live Fleet Operations
+          </Link>
+        }
+      />
 
-      {/* Top 9 Platform Metrics */}
+      {/* Top 9 Platform Metrics in Translucent Glass Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {statCards.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg p-5 shadow-sm border border-gray-200 flex items-center justify-between">
+          <div key={index} className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-5 shadow-[0_4px_20px_-2px_rgba(18,184,176,0.06)] border border-white/80 dark:border-white/10 flex items-center justify-between transition-all hover:shadow-[0_8px_30px_rgba(18,184,176,0.1)] hover:-translate-y-0.5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{stat.title}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">{stat.title}</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-1">{stat.value}</p>
             </div>
-            <div className={`p-3 rounded-lg ${stat.bg}`}>
+            <div className={`p-3 rounded-xl shadow-xs ${stat.bg}`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
           </div>
@@ -119,33 +127,37 @@ const AdminDashboard = () => {
       </div>
 
       {/* Primary Section: Distributed Food Audit Ledger */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-white/90 dark:border-white/10 shadow-[0_8px_32px_rgba(18,184,176,0.06)] overflow-hidden">
+        <div className="p-6 border-b border-[#D2EBE6]/70 dark:border-white/10 bg-[#F8FCFB]/80 dark:bg-slate-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <Utensils className="w-5 h-5 text-[#166534]" />
-              <h2 className="text-lg font-bold text-[#1e3a5f]">
+              <Utensils className="w-5 h-5 text-[#12B8B0]" />
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                 Distributed Food & Rescue Audit Ledger
               </h2>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Detailed tracking of who donated, what was donated, which NGO received it, and verified beneficiary counts
             </p>
           </div>
 
-          <div className="flex items-center bg-gray-100 p-1 rounded-md text-xs font-semibold">
+          <div className="flex items-center bg-[#EAF7F5]/80 dark:bg-slate-800 p-1.5 rounded-2xl border border-[#D5EFEA] dark:border-slate-700/80 text-xs font-semibold gap-1.5">
             <button
               onClick={() => setViewFilter('DISTRIBUTED')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                viewFilter === 'DISTRIBUTED' ? 'bg-white text-[#166534] shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewFilter === 'DISTRIBUTED' 
+                  ? 'bg-white dark:bg-slate-700 text-[#0F766E] dark:text-teal-300 shadow-xs font-bold border border-[#BCE8E2] dark:border-teal-800/50' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Distributed Only ({pickups.filter(p => p.pickupStatus === 'DISTRIBUTED').length})
             </button>
             <button
               onClick={() => setViewFilter('ALL')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                viewFilter === 'ALL' ? 'bg-white text-[#1e3a5f] shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewFilter === 'ALL' 
+                  ? 'bg-white dark:bg-slate-700 text-[#0F766E] dark:text-teal-300 shadow-xs font-bold border border-[#BCE8E2] dark:border-teal-800/50' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               All Rescues ({pickups.length})

@@ -129,7 +129,7 @@ const NGODashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-[#166534] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#12B8B0] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -297,7 +297,7 @@ const NGODashboard = () => {
                           setSelectedDonation(donation);
                           setRequestQty(String(donation.quantity));
                         }}
-                        className="px-4 py-2 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 transition-colors shadow-sm"
+                        className="px-4 py-2 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] transition-colors shadow-xs shadow-[#12B8B0]/25 cursor-pointer"
                       >
                         Request This Food
                       </button>
@@ -466,7 +466,7 @@ const NGODashboard = () => {
                           setDistBeneficiaries('50');
                           setDistQty('25');
                         }}
-                        className="px-4 py-1.5 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 transition-colors shadow-sm"
+                        className="px-4 py-1.5 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] transition-colors shadow-xs shadow-[#12B8B0]/25 cursor-pointer"
                       >
                         Record Distribution
                       </button>
@@ -481,15 +481,15 @@ const NGODashboard = () => {
 
       {/* Request Food Modal */}
       {selectedDonation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-[#1e3a5f] mb-2">Request Food Donation</h3>
-            <p className="text-xs text-gray-600 mb-4">
-              Item: <span className="font-semibold text-gray-900">{selectedDonation.foodType}</span> (Max: {selectedDonation.quantity} {selectedDonation.unit})
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-[0_16px_48px_rgba(18,184,176,0.15)] border border-white/90 dark:border-white/10 max-w-md w-full p-6 sm:p-7">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">Request Food Donation</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Item: <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedDonation.foodType}</span> (Max: {selectedDonation.quantity} {selectedDonation.unit})
             </p>
             <form onSubmit={handleCreateRequest} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Portions / Quantity Needed *</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Portions / Quantity Needed *</label>
                 <input
                   type="number"
                   required
@@ -497,31 +497,31 @@ const NGODashboard = () => {
                   max={selectedDonation.quantity}
                   value={requestQty}
                   onChange={(e) => setRequestQty(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-[#166534] focus:border-[#166534]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Message for Donor (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Message for Donor (Optional)</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. For evening soup kitchen shelter..."
+                  placeholder="e.g., For evening soup kitchen shelter..."
                   value={requestMsg}
                   onChange={(e) => setRequestMsg(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-[#166534] focus:border-[#166534]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setSelectedDonation(null)}
-                  className="px-4 py-2 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReq}
-                  className="px-4 py-2 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 disabled:opacity-50"
+                  className="px-5 py-2 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] transition-all shadow-xs shadow-[#12B8B0]/25 disabled:opacity-50 cursor-pointer"
                 >
                   {submittingReq ? 'Submitting...' : 'Confirm Request'}
                 </button>
@@ -533,15 +533,15 @@ const NGODashboard = () => {
 
       {/* Distribution Modal */}
       {selectedDist && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-[#1e3a5f] mb-2">Record Food Distribution</h3>
-            <p className="text-xs text-gray-600 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-[0_16px_48px_rgba(18,184,176,0.15)] border border-white/90 dark:border-white/10 max-w-md w-full p-6 sm:p-7">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">Record Food Distribution</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Document final distribution to beneficiaries to complete the DBMS workflow.
             </p>
             <form onSubmit={handleCompleteDistribution} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Number of People / Beneficiaries Fed *</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Number of People / Beneficiaries Fed *</label>
                 <input
                   type="number"
                   required
@@ -549,42 +549,42 @@ const NGODashboard = () => {
                   placeholder="e.g. 75"
                   value={distBeneficiaries}
                   onChange={(e) => setDistBeneficiaries(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-[#166534] focus:border-[#166534]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Quantity Distributed (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Quantity Distributed (Optional)</label>
                 <input
                   type="number"
                   min="1"
                   placeholder="e.g. 50"
                   value={distQty}
                   onChange={(e) => setDistQty(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-[#166534] focus:border-[#166534]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Distribution Notes</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Distribution Notes</label>
                 <input
                   type="text"
                   placeholder="e.g. Distributed hot to local homeless shelter residents"
                   value={distNotes}
                   onChange={(e) => setDistNotes(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-[#166534] focus:border-[#166534]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setSelectedDist(null)}
-                  className="px-4 py-2 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={completingDist}
-                  className="px-4 py-2 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 disabled:opacity-50"
+                  className="px-5 py-2 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] transition-all shadow-xs shadow-[#12B8B0]/25 disabled:opacity-50 cursor-pointer"
                 >
                   {completingDist ? 'Completing...' : 'Mark Distributed'}
                 </button>

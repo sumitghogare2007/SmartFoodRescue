@@ -66,7 +66,7 @@ const DonorDashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-[#166534] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#12B8B0] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -213,7 +213,7 @@ const DonorDashboard = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3
-                        className="font-bold text-[#1e3a5f] hover:text-[#166534] cursor-pointer"
+                        className="font-bold text-[#1e3a5f] dark:text-slate-100 hover:text-[#12B8B0] cursor-pointer"
                         onClick={() => navigate(`/donations/${donation._id}`)}
                       >
                         {donation.foodType}
@@ -299,7 +299,7 @@ const DonorDashboard = () => {
                       {req.requestStatus === 'PENDING' && (
                         <button
                           onClick={() => setAssigningRequestId(req._id)}
-                          className="px-4 py-1.5 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 transition-colors shadow-xs"
+                          className="px-4 py-1.5 bg-[#12B8B0] hover:bg-[#0EA29B] text-white rounded-xl text-xs font-bold transition-all shadow-xs shadow-[#12B8B0]/25 cursor-pointer"
                         >
                           Accept & Assign Volunteer
                         </button>

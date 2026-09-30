@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/ui/Logo';
 import toast from 'react-hot-toast';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -31,120 +32,126 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div className="min-h-screen bg-[#EAF7F5] dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Soft Mint Ambient Glow Orbs */}
+      <div className="fixed -top-40 -left-40 w-96 h-96 bg-[#12B8B0]/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed top-1/3 -right-40 w-96 h-96 bg-[#D9F3EF]/60 dark:bg-teal-700/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed -bottom-40 left-1/4 w-96 h-96 bg-[#12B8B0]/10 dark:bg-teal-400/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
         <div className="flex justify-center mb-3">
-          <Logo size={44} showText={true} textSize="text-2xl font-bold" />
+          <Logo size={46} showText={true} textSize="text-2xl font-bold" />
         </div>
-        <h2 className="mt-4 text-2xl font-extrabold text-[#1e3a5f]">
-          Sign in to your account
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/40 text-xs font-semibold mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-[#12B8B0]" />
+          Zero Waste Platform
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+          Welcome back
         </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Access your donor, NGO, or volunteer dispatch workspace
+        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
+        <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-[0_8px_32px_rgba(18,184,176,0.08)] rounded-3xl border border-white/90 dark:border-white/10">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email address</label>
-              <div className="mt-1">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-                />
-              </div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Email address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@organization.com"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#166534] focus:border-[#166534] sm:text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <Link to="/auth/forgot-password" className="font-medium text-[#166534] hover:text-green-800">
-                  Forgot your password?
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Password
+                </label>
+                <Link to="/auth/forgot-password" className="text-xs font-medium text-[#12B8B0] hover:text-[#0EA29B] transition-colors">
+                  Forgot password?
                 </Link>
               </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#D2EBE6] dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#12B8B0]/25 focus:border-[#12B8B0] transition-all"
+              />
             </div>
 
             <div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#166534] hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#166534] disabled:opacity-50"
+                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#12B8B0] hover:bg-[#0EA29B] shadow-xs shadow-[#12B8B0]/25 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+                {!loading && <ArrowRight className="w-3.5 h-3.5" />}
               </button>
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Don't have an account?</span>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
+          <div className="mt-6 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Don't have an account?{' '}
               <Link
                 to="/auth/register"
-                className="font-medium text-[#1e3a5f] hover:text-blue-900"
+                className="font-bold text-[#12B8B0] hover:text-[#0EA29B] transition-colors"
               >
-                Register here
+                Register now
               </Link>
-            </div>
+            </p>
           </div>
         </div>
 
         {/* Demo Credentials */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-md p-4">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials (Click to fill):</h4>
+        <div className="mt-6 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-[#D2EBE6] dark:border-white/10 rounded-2xl p-4 shadow-xs">
+          <h4 className="text-xs font-bold text-[#0F766E] dark:text-teal-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#12B8B0]"></span> Quick Demo Credentials:
+          </h4>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleQuickFill('admin@smartfoodrescue.com', 'Admin@123')}
-              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+              className="text-left p-2.5 bg-white/80 dark:bg-slate-800/80 border border-[#D2EBE6] dark:border-slate-700 rounded-xl text-xs hover:border-[#12B8B0] hover:bg-[#EAF7F5]/50 transition-all cursor-pointer"
             >
-              <span className="font-semibold text-blue-900 block">Admin</span>
-              <span className="text-blue-700 text-[11px] font-mono block truncate">admin@smartfoodrescue.com</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">Admin Desk</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] font-mono block truncate">admin@smartfoodrescue.com</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('donor@smartfoodrescue.com', 'Donor@123')}
-              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+              className="text-left p-2.5 bg-white/80 dark:bg-slate-800/80 border border-[#D2EBE6] dark:border-slate-700 rounded-xl text-xs hover:border-[#12B8B0] hover:bg-[#EAF7F5]/50 transition-all cursor-pointer"
             >
-              <span className="font-semibold text-blue-900 block">Donor</span>
-              <span className="text-blue-700 text-[11px] font-mono block truncate">donor@smartfoodrescue.com</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">Donor (Hotel)</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] font-mono block truncate">donor@smartfoodrescue.com</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('ngo@smartfoodrescue.com', 'Ngo@123')}
-              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+              className="text-left p-2.5 bg-white/80 dark:bg-slate-800/80 border border-[#D2EBE6] dark:border-slate-700 rounded-xl text-xs hover:border-[#12B8B0] hover:bg-[#EAF7F5]/50 transition-all cursor-pointer"
             >
-              <span className="font-semibold text-blue-900 block">NGO</span>
-              <span className="text-blue-700 text-[11px] font-mono block truncate">ngo@smartfoodrescue.com</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">NGO (Shelter)</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] font-mono block truncate">ngo@smartfoodrescue.com</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('volunteer@smartfoodrescue.com', 'Volunteer@123')}
-              className="text-left px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs hover:bg-blue-100 hover:border-blue-400 transition-colors shadow-sm cursor-pointer"
+              className="text-left p-2.5 bg-white/80 dark:bg-slate-800/80 border border-[#D2EBE6] dark:border-slate-700 rounded-xl text-xs hover:border-[#12B8B0] hover:bg-[#EAF7F5]/50 transition-all cursor-pointer"
             >
-              <span className="font-semibold text-blue-900 block">Volunteer</span>
-              <span className="text-blue-700 text-[11px] font-mono block truncate">volunteer@smartfoodrescue.com</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">Volunteer Courier</span>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] font-mono block truncate">volunteer@smartfoodrescue.com</span>
             </button>
           </div>
         </div>

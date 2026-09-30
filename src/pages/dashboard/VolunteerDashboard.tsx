@@ -133,7 +133,7 @@ const VolunteerDashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-[#166534] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#12B8B0] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -208,7 +208,7 @@ const VolunteerDashboard = () => {
                         <button
                           onClick={() => handleUpdateStatus(pickup._id, 'ASSIGNED')}
                           disabled={actionLoading === pickup._id}
-                          className="px-4 py-2 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 disabled:opacity-50 flex items-center"
+                          className="px-4 py-2 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] disabled:opacity-50 flex items-center shadow-xs shadow-[#12B8B0]/25 cursor-pointer"
                         >
                           {actionLoading === pickup._id && <Loader className="w-3.5 h-3.5 animate-spin mr-1.5" />}
                           Accept Assignment
@@ -276,7 +276,7 @@ const VolunteerDashboard = () => {
                         <button
                           onClick={() => handleUpdateStatus(pickup._id, 'DELIVERED')}
                           disabled={actionLoading === pickup._id}
-                          className="px-4 py-2 bg-[#166534] text-white rounded text-xs font-bold hover:bg-green-800 disabled:opacity-50 flex items-center shadow-sm"
+                          className="px-4 py-2 bg-[#12B8B0] text-white rounded-xl text-xs font-bold hover:bg-[#0EA29B] disabled:opacity-50 flex items-center shadow-xs shadow-[#12B8B0]/25 cursor-pointer"
                         >
                           {actionLoading === pickup._id ? <Loader className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Check className="w-3.5 h-3.5 mr-1.5" />}
                           Food Delivered
@@ -379,8 +379,8 @@ const VolunteerDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     {/* Donor Pickup */}
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                      <div className="flex items-center text-[#166534] font-bold mb-1">
-                        <MapPin className="w-3.5 h-3.5 mr-1 text-[#166534]" />
+                      <div className="flex items-center text-[#12B8B0] font-bold mb-1">
+                        <MapPin className="w-3.5 h-3.5 mr-1 text-[#12B8B0]" />
                         <span>Pickup Location (Donor)</span>
                       </div>
                       <p className="font-semibold text-gray-900">{donor?.organizationName || donor?.contactName || 'Donor'}</p>
@@ -426,7 +426,7 @@ const VolunteerDashboard = () => {
                               : 'bg-gray-50 border-gray-200 text-gray-400'
                           }`}>
                             <div className="flex items-center justify-center gap-1 font-bold mb-0.5 text-[11px]">
-                              {isDone && <Check className="w-3 h-3 text-[#166534]" />}
+                              {isDone && <Check className="w-3 h-3 text-[#12B8B0]" />}
                               <span>{step}</span>
                             </div>
                             {historyStep && (

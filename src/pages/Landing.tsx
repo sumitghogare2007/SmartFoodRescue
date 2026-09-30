@@ -1,25 +1,36 @@
 import { Link } from 'react-router-dom';
-import { Heart, ArrowRight } from 'lucide-react';
+import { Heart, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-green-100">
-      <nav className="border-b border-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#F9FCFB] via-[#EAF7F5] to-[#D9F3EF] dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-800 dark:text-slate-100 font-sans selection:bg-[#E1F6F3] relative overflow-hidden">
+      {/* Soft Mint Ambient Glow Orbs */}
+      <div className="fixed -top-40 -left-40 w-96 h-96 bg-[#12B8B0]/15 dark:bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed top-1/4 -right-40 w-96 h-96 bg-[#D9F3EF]/70 dark:bg-teal-700/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-10 left-1/3 w-96 h-96 bg-[#12B8B0]/10 dark:bg-teal-400/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Glassmorphic Navbar */}
+      <nav className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-[#D2EBE6]/70 dark:border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             <Link to="/" className="flex items-center">
-              <Logo size={36} showText={true} textSize="text-2xl font-bold" />
+              <Logo size={40} showText={true} textSize="text-2xl font-bold" />
             </Link>
-            <div className="hidden md:flex gap-8 items-center font-medium text-gray-600">
-              <a href="#how-it-works" className="hover:text-[#1e3a5f] transition-colors">How It Works</a>
-              <a href="#donors" className="hover:text-[#1e3a5f] transition-colors">For Donors</a>
-              <a href="#ngos" className="hover:text-[#1e3a5f] transition-colors">For NGOs</a>
-              <a href="#volunteers" className="hover:text-[#1e3a5f] transition-colors">For Volunteers</a>
-              <a href="#process" className="hover:text-[#1e3a5f] transition-colors">Rescue Process</a>
-              <a href="#impact" className="hover:text-[#1e3a5f] transition-colors">Impact</a>
-              <Link to="/auth/login" className="text-[#166534] hover:text-green-800 font-semibold">Log In</Link>
-              <Link to="/auth/register" className="bg-[#166534] text-white px-5 py-2 rounded-md hover:bg-green-800 transition-colors shadow-sm font-semibold">
+            <div className="hidden md:flex gap-7 items-center font-medium text-xs text-slate-600 dark:text-slate-300">
+              <a href="#how-it-works" className="hover:text-[#12B8B0] transition-colors">How It Works</a>
+              <a href="#donors" className="hover:text-[#12B8B0] transition-colors">For Donors</a>
+              <a href="#ngos" className="hover:text-[#12B8B0] transition-colors">For NGOs</a>
+              <a href="#volunteers" className="hover:text-[#12B8B0] transition-colors">For Volunteers</a>
+              <a href="#process" className="hover:text-[#12B8B0] transition-colors">Rescue Process</a>
+              <a href="#impact" className="hover:text-[#12B8B0] transition-colors">Impact</a>
+              <Link to="/auth/login" className="text-slate-700 dark:text-slate-200 hover:text-[#12B8B0] font-semibold transition-colors">
+                Sign In
+              </Link>
+              <Link
+                to="/auth/register"
+                className="bg-[#12B8B0] hover:bg-[#0EA29B] text-white px-5 py-2.5 rounded-xl shadow-xs shadow-[#12B8B0]/25 font-bold transition-all text-xs"
+              >
                 Register
               </Link>
             </div>
@@ -27,238 +38,169 @@ const Landing = () => {
         </div>
       </nav>
 
-      <main>
+      <main className="relative z-10">
         {/* Hero Section */}
-        <section className="py-16 lg:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto">
-            <span className="inline-block px-3 py-1 bg-green-50 text-[#166534] border border-green-200 text-xs font-semibold rounded-full uppercase tracking-wider mb-4">
-              Community Food Rescue Platform
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#1e3a5f] tracking-tight leading-tight mb-6">
+        <section className="py-20 lg:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E1F6F3] dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/40 text-xs font-bold uppercase tracking-wider shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-[#12B8B0]" />
+              Soft Mint Clean Architecture
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
               Rescue Food. Feed People.<br />
-              <span className="text-[#166534]">Reduce Waste.</span>
+              <span className="text-[#12B8B0]">Without the clutter.</span>
             </h1>
-            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Connect surplus food from restaurants, hotels, and caterers directly with verified local NGOs. Powered by community volunteers and real-time food tracking.
+
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Connect surplus meals from restaurants, hotels, and caterers directly with verified local charities. Powered by community volunteers and real-time GPS telemetry.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link to="/auth/register" className="inline-flex justify-center items-center bg-[#166534] text-white px-7 py-3 rounded-md font-bold text-base hover:bg-green-800 transition-colors shadow-sm">
-                Get Started
-                <ArrowRight className="ml-2 w-5 h-5" />
+
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
+              <Link
+                to="/auth/register"
+                className="w-full sm:w-auto inline-flex justify-center items-center bg-[#12B8B0] hover:bg-[#0EA29B] text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-xs shadow-[#12B8B0]/25 transition-all"
+              >
+                Join the Network
+                <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
-              <a href="#how-it-works" className="inline-flex justify-center items-center bg-white text-[#1e3a5f] border border-gray-300 px-7 py-3 rounded-md font-bold text-base hover:bg-gray-50 transition-colors">
+              <a
+                href="#how-it-works"
+                className="w-full sm:w-auto inline-flex justify-center items-center bg-white/80 dark:bg-slate-900/80 hover:bg-[#EAF7F5] dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-[#D2EBE6] dark:border-slate-700 px-7 py-3.5 rounded-xl font-bold text-sm transition-all"
+              >
                 How It Works
               </a>
             </div>
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="py-20 bg-gray-50 border-y border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-14">
-              <h2 className="text-3xl font-bold text-[#1e3a5f]">How It Works</h2>
-              <p className="mt-3 text-gray-600">A transparent 3-step platform connecting surplus food with scarcity.</p>
+        {/* How It Works (3 Glass Cards) */}
+        <section id="how-it-works" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">How It Works</h2>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">A transparent 3-step green corridor connecting food surplus with hunger relief.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-white/90 dark:border-white/10 shadow-[0_8px_32px_rgba(18,184,176,0.06)] hover:shadow-[0_12px_40px_rgba(18,184,176,0.12)] transition-all">
+              <div className="w-12 h-12 bg-[#E1F6F3] dark:bg-teal-950/60 text-[#12B8B0] border border-[#BCE8E2] rounded-2xl flex items-center justify-center mb-5 font-black text-lg shadow-xs">
+                1
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Donors List Surplus</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Restaurants, wedding venues, and caterers list available cooked meals or fresh produce with quantity, preparation time, and verified Aadhaar ID.
+              </p>
             </div>
-            
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-                <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-lg flex items-center justify-center mb-5 font-bold text-lg">
-                  1
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Donors Post Surplus Food</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Restaurants, wedding venues, and caterers list available cooked meals or fresh produce with quantity, preparation time, and verified Aadhaar ID.
-                </p>
-              </div>
 
-              <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-                <div className="w-12 h-12 bg-green-50 text-[#166534] rounded-lg flex items-center justify-center mb-5 font-bold text-lg">
-                  2
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">NGOs Request & Claim</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Registered charities and soup kitchens browse available food by urgency and proximity, submitting requests for their verified beneficiaries.
-                </p>
+            <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-white/90 dark:border-white/10 shadow-[0_8px_32px_rgba(18,184,176,0.06)] hover:shadow-[0_12px_40px_rgba(18,184,176,0.12)] transition-all">
+              <div className="w-12 h-12 bg-[#E1F6F3] dark:bg-teal-950/60 text-[#12B8B0] border border-[#BCE8E2] rounded-2xl flex items-center justify-center mb-5 font-black text-lg shadow-xs">
+                2
               </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">NGOs Request & Claim</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Registered charities and soup kitchens browse available food by urgency and proximity, submitting requests for their verified beneficiaries.
+              </p>
+            </div>
 
-              <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-                <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-lg flex items-center justify-center mb-5 font-bold text-lg">
-                  3
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Volunteers Transport & Distribute</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Dedicated volunteers accept pickup tasks, safely transit the food from donor to NGO, and log each stage on a real-time tracking timeline.
-                </p>
+            <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-white/90 dark:border-white/10 shadow-[0_8px_32px_rgba(18,184,176,0.06)] hover:shadow-[0_12px_40px_rgba(18,184,176,0.12)] transition-all">
+              <div className="w-12 h-12 bg-[#E1F6F3] dark:bg-teal-950/60 text-[#12B8B0] border border-[#BCE8E2] rounded-2xl flex items-center justify-center mb-5 font-black text-lg shadow-xs">
+                3
               </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Volunteers Transport</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Dedicated couriers accept pickup tasks, safely transit the food from donor to NGO, and log each stage on a real-time GPS tracking timeline.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* For Stakeholders Sections */}
+        {/* Stakeholder Sections */}
         <section id="donors" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <span className="text-xs font-bold text-[#166534] uppercase tracking-wider">For Food Donors</span>
-              <h2 className="text-3xl font-bold text-[#1e3a5f] mt-2 mb-4">Turn Surplus Food Into Social Good</h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
+              <span className="text-xs font-bold text-[#0F766E] dark:text-teal-300 uppercase tracking-wider">For Food Donors</span>
+              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mt-2 mb-4">Turn Surplus Meals Into Social Good</h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                 Whether you run a restaurant, hotel, university mess, or catering service, surplus food doesn't have to end up in landfills. List your donations in under 2 minutes.
               </p>
-              <ul className="space-y-3 text-sm text-gray-700 mb-6">
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Quick listing with preparation & expiry time validation</li>
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Verified donor badge with secure masked Aadhaar verification</li>
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Full visibility of pickup status and final NGO distribution</li>
+              <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300 mb-6">
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#12B8B0]" /> Quick listing with preparation & expiry time validation</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#12B8B0]" /> Verified donor badge with secure masked Aadhaar verification</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-[#12B8B0]" /> Full visibility of pickup status and final NGO distribution</li>
               </ul>
-              <Link to="/auth/register" className="inline-block bg-[#166534] text-white px-5 py-2.5 rounded-md font-medium text-sm hover:bg-green-800 transition-colors">
+              <Link to="/auth/register" className="inline-block bg-[#12B8B0] hover:bg-[#0EA29B] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all">
                 Register as Donor
               </Link>
             </div>
-            <div className="bg-gray-100 p-8 rounded-lg border border-gray-200">
-              <h4 className="font-bold text-[#1e3a5f] mb-3">Supported Donor Types</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
-                <div className="p-3 bg-white rounded border border-gray-200">Restaurants & Cafes</div>
-                <div className="p-3 bg-white rounded border border-gray-200">Hotels & Banquets</div>
-                <div className="p-3 bg-white rounded border border-gray-200">College Campuses</div>
-                <div className="p-3 bg-white rounded border border-gray-200">Supermarkets</div>
-                <div className="p-3 bg-white rounded border border-gray-200">Event Organizers</div>
-                <div className="p-3 bg-white rounded border border-gray-200">Individual Donors</div>
+            <div className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-white/90 dark:border-white/10 shadow-[0_8px_32px_rgba(18,184,176,0.06)]">
+              <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 text-sm">Supported Donor Facilities</h4>
+              <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-300">
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">Restaurants & Cafes</div>
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">Hotels & Banquets</div>
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">College Campuses</div>
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">Supermarkets</div>
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">Event Organizers</div>
+                <div className="p-3 bg-[#F8FCFB]/80 dark:bg-slate-800/60 rounded-xl border border-[#D2EBE6]/70 dark:border-white/5 font-semibold">Individual Donors</div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="ngos" className="py-16 bg-gray-50 border-y border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="order-2 md:order-1 bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-                <h4 className="font-bold text-[#1e3a5f] mb-3">NGO Benefits</h4>
-                <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="p-3 bg-gray-50 rounded border border-gray-100">Live feed of fresh and packaged food nearby</li>
-                  <li className="p-3 bg-gray-50 rounded border border-gray-100">Automatic freshness categorization: Fresh, Expiring Soon, Urgent</li>
-                  <li className="p-3 bg-gray-50 rounded border border-gray-100">Direct coordination with assigned delivery volunteers</li>
-                  <li className="p-3 bg-gray-50 rounded border border-gray-100">Beneficiary distribution recording for DBMS and audit compliance</li>
-                </ul>
-              </div>
-              <div className="order-1 md:order-2">
-                <span className="text-xs font-bold text-[#166534] uppercase tracking-wider">For NGOs & Charities</span>
-                <h2 className="text-3xl font-bold text-[#1e3a5f] mt-2 mb-4">Feed More Beneficiaries With Zero Food Cost</h2>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  Registered NGOs and shelter homes can easily view surplus food available in their locality, request exact portions needed, and record distribution numbers.
-                </p>
-                <Link to="/auth/register" className="inline-block bg-[#166534] text-white px-5 py-2.5 rounded-md font-medium text-sm hover:bg-green-800 transition-colors">
-                  Register as NGO
-                </Link>
-              </div>
-            </div>
+        {/* Process Section */}
+        <section id="process" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-xs font-bold text-[#0F766E] dark:text-teal-300 uppercase tracking-wider">End-to-End Tracking</span>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mt-2">Food Rescue Process Workflow</h2>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Every single stage change is audited and permanently verified in MongoDB.</p>
           </div>
-        </section>
 
-        <section id="volunteers" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="text-xs font-bold text-[#166534] uppercase tracking-wider">For Volunteers</span>
-              <h2 className="text-3xl font-bold text-[#1e3a5f] mt-2 mb-4">Be the Bridge Between Surplus and Scarcity</h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Volunteers are the backbone of the food rescue network. Use your bike, car, or van to pick up fresh food from donors and deliver it safely to local shelters.
-              </p>
-              <ul className="space-y-3 text-sm text-gray-700 mb-6">
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Clear task dashboard showing donor address and NGO destination</li>
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Single-click status progression: Food Received → Dispatched → Delivered</li>
-                <li className="flex items-center"><span className="w-2 h-2 rounded-full bg-[#166534] mr-2"></span> Full audit trail logged securely into MongoDB</li>
-              </ul>
-              <Link to="/auth/register" className="inline-block bg-[#166534] text-white px-5 py-2.5 rounded-md font-medium text-sm hover:bg-green-800 transition-colors">
-                Register as Volunteer
-              </Link>
-            </div>
-            <div className="bg-emerald-50/50 p-8 rounded-lg border border-emerald-200">
-              <h4 className="font-bold text-[#1e3a5f] mb-3">Vehicle Types Welcomed</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 bg-white rounded border border-emerald-100 font-medium text-gray-800">Motorcycle / Scooter</div>
-                <div className="p-3 bg-white rounded border border-emerald-100 font-medium text-gray-800">Car / Hatchback</div>
-                <div className="p-3 bg-white rounded border border-emerald-100 font-medium text-gray-800">Van / Tempo</div>
-                <div className="p-3 bg-white rounded border border-emerald-100 font-medium text-gray-800">Bicycle</div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {['ASSIGNED', 'FOOD RECEIVED', 'DISPATCHED', 'DELIVERED', 'DISTRIBUTED'].map((step, idx) => (
+              <div key={step} className="bg-white/85 dark:bg-slate-900/80 backdrop-blur-xl p-5 rounded-3xl border border-white/90 dark:border-white/10 text-center shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-[#E1F6F3] text-[#12B8B0] font-bold flex items-center justify-center mx-auto mb-3 text-xs border border-[#BCE8E2]">
+                  {idx + 1}
+                </div>
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs mb-1">{step}</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Stage verified with immutable timestamps.</p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Food Rescue Process Timeline */}
-        <section id="process" className="py-20 bg-gray-50 border-y border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-14">
-              <span className="text-xs font-bold text-[#166534] uppercase tracking-wider">End-to-End Tracking</span>
-              <h2 className="text-3xl font-bold text-[#1e3a5f] mt-2">Food Rescue Process Workflow</h2>
-              <p className="mt-3 text-gray-600">Every single status change is recorded and verified in MongoDB.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center justify-center mx-auto mb-3 text-sm">1</div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">ASSIGNED</h4>
-                <p className="text-xs text-gray-500">NGO requests food; donor or admin confirms and assigns volunteer.</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center mx-auto mb-3 text-sm">2</div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">FOOD RECEIVED</h4>
-                <p className="text-xs text-gray-500">Volunteer arrives at donor, inspects packaging, and marks received.</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-800 font-bold flex items-center justify-center mx-auto mb-3 text-sm">3</div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">DISPATCHED</h4>
-                <p className="text-xs text-gray-500">Volunteer departs donor location and begins transit toward NGO.</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center mx-auto mb-3 text-sm">4</div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">DELIVERED</h4>
-                <p className="text-xs text-gray-500">Food arrives at shelter. NGO confirms handover.</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center mx-auto mb-3 text-sm">5</div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">DISTRIBUTED</h4>
-                <p className="text-xs text-gray-500">Food served to community beneficiaries and logged in audit record.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
         {/* Impact Section */}
         <section id="impact" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#1e3a5f] rounded-xl p-10 sm:p-14 text-center shadow-md">
-            <h2 className="text-3xl font-bold text-white mb-3">Verified Network Impact</h2>
-            <p className="text-blue-100 text-sm mb-10 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-br from-[#0F766E] to-[#12B8B0] rounded-3xl p-10 sm:p-14 text-center shadow-[0_16px_48px_rgba(18,184,176,0.25)] text-white">
+            <h2 className="text-3xl font-extrabold mb-3">Verified Network Impact</h2>
+            <p className="text-teal-100 text-xs sm:text-sm mb-10 max-w-2xl mx-auto">
               Real metrics tracked through MongoDB collections across donors, NGOs, and volunteers.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-white">
-              <div className="border-r border-blue-900 last:border-0">
-                <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400">100%</div>
-                <div className="text-xs sm:text-sm text-blue-100 mt-1 font-medium">Traceable Rescues</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <div className="border-r border-teal-500/40 last:border-0">
+                <div className="text-3xl sm:text-4xl font-black text-white">100%</div>
+                <div className="text-xs text-teal-100 mt-1 font-semibold">Traceable Rescues</div>
               </div>
-              <div className="border-r border-blue-900 last:border-0">
-                <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400">&lt; 4 Hours</div>
-                <div className="text-xs sm:text-sm text-blue-100 mt-1 font-medium">Avg. Pickup Time</div>
+              <div className="border-r border-teal-500/40 last:border-0">
+                <div className="text-3xl sm:text-4xl font-black text-white">&lt; 4 Hours</div>
+                <div className="text-xs text-teal-100 mt-1 font-semibold">Avg. Pickup Time</div>
               </div>
-              <div className="border-r border-blue-900 last:border-0">
-                <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400">Zero</div>
-                <div className="text-xs sm:text-sm text-blue-100 mt-1 font-medium">Direct Platform Fees</div>
+              <div className="border-r border-teal-500/40 last:border-0">
+                <div className="text-3xl sm:text-4xl font-black text-white">Zero</div>
+                <div className="text-xs text-teal-100 mt-1 font-semibold">Direct Platform Fees</div>
               </div>
               <div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-emerald-400">Masked</div>
-                <div className="text-xs sm:text-sm text-blue-100 mt-1 font-medium">Aadhaar Privacy</div>
+                <div className="text-3xl sm:text-4xl font-black text-white">Masked</div>
+                <div className="text-xs text-teal-100 mt-1 font-semibold">Aadhaar Privacy</div>
               </div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="bg-gray-50 border-t border-gray-200 py-10 text-center text-gray-500 text-sm">
+      <footer className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-t border-[#D2EBE6]/70 dark:border-white/10 py-10 text-center text-slate-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-[#1e3a5f] font-bold">
-            <Heart className="w-5 h-5 text-[#166534]" />
-            SmartFoodRescue
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-bold">
+            <Heart className="w-4 h-4 text-[#12B8B0]" />
+            SmartFoodRescue Platform
           </div>
           <div>
             Built with React, Express, MongoDB & Mongoose.

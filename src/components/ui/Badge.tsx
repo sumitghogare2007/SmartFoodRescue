@@ -3,7 +3,7 @@ import { cn } from './GlassCard';
 
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'green' | 'amber' | 'red' | 'blue' | 'gray' | 'purple' | 'teal' | 'indigo';
+  variant?: 'green' | 'amber' | 'red' | 'blue' | 'gray' | 'purple' | 'teal' | 'indigo' | 'mint';
   size?: 'sm' | 'md';
   pulse?: boolean;
   className?: string;
@@ -18,7 +18,8 @@ export function Badge({ children, variant = 'gray', size = 'sm', pulse = false, 
     gray: "bg-gray-100 text-gray-800 border-gray-200",
     purple: "bg-purple-50 text-purple-800 border-purple-200",
     teal: "bg-teal-50 text-teal-800 border-teal-200",
-    indigo: "bg-indigo-50 text-indigo-800 border-indigo-200"
+    indigo: "bg-indigo-50 text-indigo-800 border-indigo-200",
+    mint: "bg-[#E1F6F3] text-[#0F766E] border-[#BCE8E2] dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800/40"
   };
 
   const sizes = {
