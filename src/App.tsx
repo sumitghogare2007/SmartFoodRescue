@@ -23,6 +23,7 @@ import DonationDetail from './pages/donations/DonationDetail';
 import PickupsPage from './pages/pickups/PickupsPage';
 import UsersPage from './pages/admin/UsersPage';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import LiveTrackingPage from './pages/tracking/LiveTrackingPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,6 +82,7 @@ const App = () => {
                 <Route path="tracking/:pickupId" element={<LiveTrackingPage />} />
 
                 <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<Profile />} />
               </Route>
               
               <Route path="*" element={<Navigate to="/" replace />} />

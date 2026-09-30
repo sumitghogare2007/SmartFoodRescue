@@ -14,11 +14,13 @@ import {
   Sun,
   Shield,
   ShieldCheck,
-  Building2
+  Building2,
+  User,
+  LogOut
 } from 'lucide-react';
 
 const Sidebar = () => {
-  const { authUser } = useAuth();
+  const { authUser, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const userType = authUser?.userType;
 
@@ -143,10 +145,31 @@ const Sidebar = () => {
               </>
             )}
           </NavLink>
+
+          <NavLink 
+            to="/profile"
+            className={({ isActive }) =>
+              `group flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-[#E1F6F3] dark:bg-teal-950/40 text-[#0F766E] dark:text-teal-300 border border-[#BCE8E2] dark:border-teal-800/50 shadow-xs font-semibold'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-[#EAF7F5]/70 dark:hover:bg-slate-800/60 hover:text-[#0F766E] dark:hover:text-teal-300 border border-transparent'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <div className="flex items-center gap-3">
+                  <User className={`w-4 h-4 transition-colors ${isActive ? 'text-[#12B8B0]' : 'text-slate-400 group-hover:text-[#12B8B0]'}`} />
+                  <span>My Profile</span>
+                </div>
+                {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#12B8B0] flex-shrink-0" />}
+              </>
+            )}
+          </NavLink>
         </div>
       </nav>
       
-      {/* Bottom Footer with Dark Theme Toggle matching screenshot */}
+      {/* Bottom Footer with Dark Theme Toggle and Sign Out */}
       <div className="p-3.5 border-t border-[#D2EBE6]/70 dark:border-white/10 space-y-2">
         <button
           type="button"
@@ -166,7 +189,19 @@ const Sidebar = () => {
           </span>
         </button>
 
-        <div className="flex items-center justify-between px-2 pt-1 text-[11px] text-slate-400 dark:text-slate-400">
+        <button
+          type="button"
+          onClick={signOut}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100/90 dark:hover:bg-rose-900/40 border border-rose-200/70 dark:border-rose-900/40 transition-colors cursor-pointer shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <LogOut className="w-3.5 h-3.5 text-rose-500" />
+            <span>Sign Out</span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Exit</span>
+        </button>
+
+        <div className="flex items-center justify-between px-2 pt-0.5 text-[11px] text-slate-400 dark:text-slate-400">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3 h-3 text-[#12B8B0]" />
             <span>Secure workspace</span>
