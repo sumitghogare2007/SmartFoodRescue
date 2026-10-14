@@ -335,27 +335,6 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Database Reference Information */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="font-bold text-[#1e3a5f] text-base mb-2">DBMS & ER Diagram Status</h3>
-        <p className="text-xs text-gray-600 mb-4">
-          All 11 collections are active and connected to MongoDB (Mongoose ODM). Foreign key relationships are maintained via ObjectId references:
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono text-gray-700">
-          <div className="bg-gray-50 p-2 rounded border">users (Roles: 4)</div>
-          <div className="bg-gray-50 p-2 rounded border">donors (User Ref)</div>
-          <div className="bg-gray-50 p-2 rounded border">ngos (User Ref)</div>
-          <div className="bg-gray-50 p-2 rounded border">volunteers (User Ref)</div>
-          <div className="bg-gray-50 p-2 rounded border">locations (Geo/Addr)</div>
-          <div className="bg-gray-50 p-2 rounded border">foodDonations (Aadhaar)</div>
-          <div className="bg-gray-50 p-2 rounded border">foodItems (Donation Ref)</div>
-          <div className="bg-gray-50 p-2 rounded border">donationRequests (NGO/Donation)</div>
-          <div className="bg-gray-50 p-2 rounded border">pickups (Request/Vol)</div>
-          <div className="bg-gray-50 p-2 rounded border">pickupTracking (Timeline Log)</div>
-          <div className="bg-gray-50 p-2 rounded border">distributions (Pickup/Beneficiaries)</div>
-        </div>
-      </div>
     </div>
   );
 };
